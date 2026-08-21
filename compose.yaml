@@ -1,0 +1,18 @@
+services:
+  game:
+    build:
+      context: .
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8080/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  tunnel:
+    build:
+      context: ./tunnel
+    # Altere somente a porta abaixo se seu jogo escutar em outra porta.
+    command: tunnel --no-autoupdate --url http://game:8080
+    depends_on:
+      game:
+        condition: service_healthy
