@@ -7,265 +7,103 @@
     <style>
       :root { color-scheme: dark; font-family: system-ui, sans-serif; }
       * { box-sizing: border-box; }
-      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #07060d; color: #e2e8f0; }
-      main { width: min(96vw, 840px); display: grid; gap: 10px; padding: 10px 0; }
-      header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-      h1 { margin: 0; font-size: 22px; letter-spacing: 1px; }
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #07060d; color: #e2e8f0; }
+      canvas { display: block; }
+      #ui { position: fixed; inset: 0; pointer-events: none; }
+      #top { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; align-items: flex-start; gap: 10px; }
+      h1 { margin: 0; font-size: 20px; letter-spacing: 1px; text-shadow: 0 2px 8px #000; }
       h1 span { color: #ff2d75; text-shadow: 0 0 12px #ff2d75; }
-      input { padding: 8px 10px; border-radius: 8px; border: 1px solid #334155; background: #111827; color: #fff; width: 140px; }
-      #hud { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 34px; }
-      .chip { display: flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; background: #111827; border: 2px solid transparent; font-size: 14px; font-weight: 700; }
+      #timer { margin-left: auto; font-size: 30px; font-weight: 900; font-variant-numeric: tabular-nums; text-shadow: 0 2px 8px #000; }
+      #board { position: absolute; top: 48px; left: 10px; display: flex; flex-direction: column; gap: 4px; }
+      .chip { display: flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; background: rgba(10, 8, 20, 0.75); border: 2px solid transparent; font-size: 13px; font-weight: 700; }
       .chip.me { border-color: #fff; }
-      .chip i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
-      #timer { margin-left: auto; font-size: 26px; font-weight: 900; font-variant-numeric: tabular-nums; }
-      #wrap { position: relative; width: 100%; aspect-ratio: 40 / 24; }
-      canvas { width: 100%; height: 100%; display: block; border-radius: 10px; border: 3px solid #2a2233; background: #1a1420; }
-      #overlay { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; background: rgba(2, 6, 23, 0.65); border-radius: 10px; }
+      .chip i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+      .chip b { margin-left: auto; padding-left: 8px; }
+      #name { position: absolute; top: 48px; right: 10px; pointer-events: auto; padding: 7px 10px; border-radius: 8px; border: 1px solid #334155; background: rgba(10, 8, 20, 0.8); color: #fff; width: 130px; }
+      #cross { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px; border: 2px solid #fff; border-radius: 50%; opacity: 0.8; }
+      #cross.can { border-color: #b4ff39; box-shadow: 0 0 8px #b4ff39; }
+      #hint { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); font-size: 13px; color: #cbd5e1; background: rgba(10, 8, 20, 0.7); padding: 6px 12px; border-radius: 8px; white-space: nowrap; }
+      kbd { background: #1e293b; padding: 1px 6px; border-radius: 4px; font-family: inherit; }
+      #push { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); width: 120px; height: 5px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; }
+      #push i { display: block; height: 100%; background: #ff2d75; width: 100%; }
+      #overlay { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; background: rgba(2, 6, 23, 0.45); pointer-events: auto; }
       #overlay.hidden { display: none; }
-      #overlay h2 { margin: 0 0 8px; font-size: 34px; }
+      #overlay h2 { margin: 0 0 8px; font-size: 36px; text-shadow: 0 2px 10px #000; }
       #overlay p { margin: 4px 0; color: #cbd5e1; }
-      #overlay .big { font-size: 72px; font-weight: 900; line-height: 1; }
-      button { margin-top: 12px; padding: 10px 20px; font-size: 16px; font-weight: 800; border: 0; border-radius: 10px; background: #ff2d75; color: #fff; box-shadow: 0 0 16px #ff2d75; cursor: pointer; }
-      #help { font-size: 13px; color: #94a3b8; display: flex; gap: 16px; flex-wrap: wrap; }
-      kbd { background: #1e293b; padding: 2px 6px; border-radius: 4px; font-family: inherit; }
-      #touch { display: none; grid-template-columns: repeat(3, 56px); gap: 6px; justify-content: center; margin-top: 4px; }
-      #touch button { margin: 0; padding: 0; width: 56px; height: 56px; font-size: 22px; background: #1e293b; color: #fff; }
-      #touch .dash { background: #f43f5e; grid-column: 3; grid-row: 1 / span 3; height: 100%; }
-      @media (pointer: coarse) { #touch { display: grid; } #help { display: none; } }
+      #overlay .big { font-size: 90px; font-weight: 900; line-height: 1; }
+      button { margin-top: 12px; padding: 10px 22px; font-size: 16px; font-weight: 800; border: 0; border-radius: 10px; background: #ff2d75; color: #fff; cursor: pointer; box-shadow: 0 0 16px #ff2d75; }
+      #stun { position: absolute; inset: 0; background: radial-gradient(transparent 40%, rgba(255,255,255,0.35)); display: none; }
+      #stun.on { display: block; }
+      #dmg { position: absolute; inset: 0; background: radial-gradient(transparent 50%, rgba(255,40,40,0.55)); opacity: 0; transition: opacity .15s; }
+      #bottomleft { position: absolute; left: 14px; bottom: 14px; width: 220px; }
+      #hpText { font-weight: 900; font-size: 22px; text-shadow: 0 2px 6px #000; }
+      #hp, #armor { height: 10px; background: rgba(255,255,255,0.15); border-radius: 5px; overflow: hidden; margin-top: 4px; }
+      #hp i { display: block; height: 100%; background: #ff3b3b; width: 100%; transition: width .15s; }
+      #armor { height: 6px; } #armor i { display: block; height: 100%; background: #4d7cff; width: 0; transition: width .15s; }
+      #buffs { margin-top: 6px; font-size: 18px; }
+      #bottomright { position: absolute; right: 14px; bottom: 14px; text-align: right; }
+      #tool span { display: inline-block; padding: 4px 10px; margin-left: 6px; border-radius: 8px; background: rgba(10,8,20,0.7); font-weight: 700; font-size: 13px; opacity: 0.55; }
+      #tool span.on { opacity: 1; outline: 2px solid #fff; }
+      #power { margin-top: 8px; font-weight: 800; font-size: 14px; color: #b967ff; text-shadow: 0 2px 6px #000; }
+      .chip.dead { opacity: 0.45; text-decoration: line-through; }
+      #feed { position: absolute; top: 60px; right: 10px; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+      .kill { font-size: 14px; font-weight: 700; background: rgba(10,8,20,0.75); padding: 4px 10px; border-radius: 8px; animation: fadeout 6s forwards; }
+      @keyframes fadeout { 0%,70% { opacity: 1 } 100% { opacity: 0 } }
+      #lobby { margin-top: 10px; }
+      #lobbyName { padding: 9px 12px; border-radius: 8px; border: 1px solid #334155; background: rgba(10,8,20,0.8); color: #fff; width: 180px; font-size: 16px; margin-right: 8px; }
+      #ready { margin-top: 0; vertical-align: middle; }
+      #ready.on { background: #b4ff39; color: #07060d; box-shadow: 0 0 16px #b4ff39; }
+      #lobbyList { list-style: none; padding: 0; margin: 16px auto 0; width: 280px; text-align: left; }
+      #lobbyList li { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 8px; background: rgba(10,8,20,0.6); margin-bottom: 4px; font-weight: 700; }
+      #lobbyList li i { width: 12px; height: 12px; border-radius: 50%; }
+      #lobbyList li b { margin-left: auto; font-size: 12px; color: #94a3b8; }
+      #lobbyList li.ok b { color: #b4ff39; }
+      #lobbyHint { font-size: 13px; color: #94a3b8; }
+      #toast { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -80px); font-size: 28px; font-weight: 900; opacity: 0; transition: opacity .2s; text-shadow: 0 2px 10px #000; }
     </style>
   </head>
   <body>
-    <main>
-      <header>
+    <div id="ui">
+      <div id="top">
         <h1>🌃 GRAFFITI <span>DE MADRUGADA</span></h1>
-        <input id="name" maxlength="12" placeholder="Seu nome" aria-label="Seu nome" />
-      </header>
-      <div id="hud"><span id="timer">--</span></div>
-      <div id="wrap">
-        <canvas id="c" width="800" height="480"></canvas>
-        <div id="overlay">
-          <div>
-            <h2 id="ovTitle">Conectando…</h2>
-            <p id="ovText"></p>
-            <button id="restart" style="display:none">Outra noite</button>
+        <span id="timer">--</span>
+      </div>
+      <div id="board"></div>
+      <input id="name" maxlength="12" placeholder="Seu nome" aria-label="Seu nome" />
+      <div id="cross"></div>
+      <div id="push"><i></i></div>
+      <div id="dmg"></div>
+      <div id="bottomleft">
+        <div id="hpText">100</div>
+        <div id="hp"><i></i></div>
+        <div id="armor"><i></i></div>
+        <div id="buffs"></div>
+      </div>
+      <div id="bottomright">
+        <div id="tool"></div>
+        <div id="power"></div>
+      </div>
+      <div id="hint"><kbd>WASD</kbd> andar · <kbd>Mouse</kbd> olhar · <kbd>Espaço</kbd> pular / segurar na parede = escalar · <kbd>Clique</kbd> usar · <kbd>1</kbd>/<kbd>2</kbd> spray/arma · <kbd>F</kbd> soco · <kbd>Q</kbd> poder</div>
+      <div id="stun"></div>
+      <div id="toast"></div>
+      <div id="feed"></div>
+      <div id="overlay">
+        <div>
+          <h2 id="ovTitle">Conectando…</h2>
+          <p id="ovText"></p>
+          <div id="lobby" style="display:none">
+            <input id="lobbyName" maxlength="12" placeholder="Seu nome" aria-label="Seu nome" />
+            <button id="ready">Pronto!</button>
+            <ul id="lobbyList"></ul>
+            <p id="lobbyHint"></p>
           </div>
+          <button id="restart" style="display:none">Voltar ao lobby</button>
         </div>
       </div>
-      <div id="help">
-        <span><kbd>WASD</kbd> / <kbd>←↑↓→</kbd> andar e pichar o muro</span>
-        <span><kbd>Espaço</kbd> empurrão: rival derruba a lata e fica parado</span>
-        <span>Quando o sol nascer (90s), maior área pichada vence.</span>
-      </div>
-      <div id="touch">
-        <span></span><button data-k="up">▲</button><button class="dash" data-k="dash">EMPURRA</button>
-        <button data-k="left">◀</button><span></span><button data-k="right">▶</button>
-        <span></span><button data-k="down">▼</button>
-      </div>
-    </main>
+    </div>
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-      const socket = io();
-      const canvas = document.getElementById('c');
-      const ctx = canvas.getContext('2d');
-      const hud = document.getElementById('hud');
-      const timerEl = document.getElementById('timer');
-      const overlay = document.getElementById('overlay');
-      const ovTitle = document.getElementById('ovTitle');
-      const ovText = document.getElementById('ovText');
-      const restartBtn = document.getElementById('restart');
-      const nameInput = document.getElementById('name');
-
-      let me = null;
-      let cfg = { gridW: 40, gridH: 24, tile: 20, minPlayers: 2 };
-      let state = { phase: 'lobby', players: [], grid: null, timeLeft: 0, winner: null };
-      let gridBytes = null;
-      const hits = [];
-      const prevPos = new Map();
-
-      socket.on('welcome', (w) => { me = w.id; cfg = w; });
-      socket.on('full', () => { ovTitle.textContent = 'Muro lotado'; ovText.textContent = 'Máximo de 12 pichadores.'; });
-      socket.on('disconnect', () => { overlay.classList.remove('hidden'); ovTitle.textContent = 'Desconectado'; ovText.textContent = 'Recarregue a página.'; });
-      socket.on('hit', (h) => hits.push({ ...h, t: performance.now() }));
-      socket.on('state', (s) => {
-        state = s;
-        const bin = atob(s.grid);
-        if (!gridBytes || gridBytes.length !== bin.length) gridBytes = new Int8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) gridBytes[i] = (bin.charCodeAt(i) << 24) >> 24;
-        updateHud();
-      });
-
-      function updateHud() {
-        const sorted = [...state.players].sort((a, b) => b.score - a.score);
-        hud.querySelectorAll('.chip').forEach((e) => e.remove());
-        for (const p of sorted) {
-          const el = document.createElement('span');
-          el.className = 'chip' + (p.id === me ? ' me' : '');
-          el.innerHTML = `<i style="background:${p.color}"></i>${esc(p.name)} <b>${p.score}</b>`;
-          timerEl.before(el);
-        }
-        timerEl.textContent = state.phase === 'playing' ? '🌙 ' + fmt(state.timeLeft) : state.phase === 'countdown' ? 'Chacoalha a lata' : '--';
-
-        if (state.phase === 'lobby') {
-          overlay.classList.remove('hidden');
-          ovTitle.textContent = 'Esperando a crew';
-          ovText.textContent = `${state.players.length}/${cfg.minPlayers} na rua — compartilhe o link. A noite começa sozinha.`;
-          restartBtn.style.display = 'none';
-        } else if (state.phase === 'countdown') {
-          overlay.classList.remove('hidden');
-          ovTitle.innerHTML = `<span class="big">${state.timeLeft}</span>`;
-          ovText.textContent = 'Piche o máximo de muro antes do sol nascer!';
-          restartBtn.style.display = 'none';
-        } else if (state.phase === 'ended') {
-          overlay.classList.remove('hidden');
-          const w = state.winner;
-          ovTitle.innerHTML = w && w.name !== 'Empate' ? `🏆 <span style="color:${w.color}">${esc(w.name)}</span> dominou o muro!` : '🤝 Empate!';
-          ovText.textContent = w ? `${w.score} pedaços de muro pichados` : '';
-          restartBtn.style.display = 'inline-block';
-        } else {
-          overlay.classList.add('hidden');
-        }
-      }
-
-      function fmt(s) { return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
-      function esc(t) { return t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
-
-      // ---------- Render ----------
-      let wallCache = null;
-      function drawWall(T) {
-        if (!wallCache) {
-          wallCache = document.createElement('canvas');
-          wallCache.width = canvas.width; wallCache.height = canvas.height;
-          const w = wallCache.getContext('2d');
-          w.fillStyle = '#2b1f2a'; w.fillRect(0, 0, canvas.width, canvas.height);
-          const bh = T, bw = T * 2;
-          for (let row = 0; row * bh < canvas.height; row++) {
-            const off = row % 2 ? bw / 2 : 0;
-            for (let x = -bw; x < canvas.width; x += bw) {
-              const shade = 38 + ((row * 7 + x / bw) % 5) * 4;
-              w.fillStyle = `rgb(${shade + 20},${shade},${shade + 8})`;
-              w.fillRect(x + off + 1, row * bh + 1, bw - 2, bh - 2);
-            }
-          }
-          const g = w.createRadialGradient(canvas.width * 0.5, 0, 20, canvas.width * 0.5, 0, canvas.height);
-          g.addColorStop(0, 'rgba(255,220,150,0.18)'); g.addColorStop(1, 'rgba(0,0,0,0.45)');
-          w.fillStyle = g; w.fillRect(0, 0, canvas.width, canvas.height);
-        }
-        ctx.drawImage(wallCache, 0, 0);
-      }
-      const colorBySlot = () => { const m = {}; for (const p of state.players) m[p.slot] = p.color; return m; };
-      function draw(now) {
-        const T = cfg.tile;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const cols = colorBySlot();
-        drawWall(T);
-        if (gridBytes) {
-          for (let i = 0; i < gridBytes.length; i++) {
-            const o = gridBytes[i];
-            if (o < 0 || !cols[o]) continue;
-            const x = (i % cfg.gridW) * T + T / 2;
-            const y = Math.floor(i / cfg.gridW) * T + T / 2;
-            ctx.fillStyle = cols[o];
-            ctx.globalAlpha = 0.85;
-            ctx.beginPath();
-            ctx.arc(x, y, T * 0.62, 0, Math.PI * 2);
-            ctx.fill();
-          }
-          ctx.globalAlpha = 1;
-        }
-
-        // interpolate positions a bit for smoothness
-        for (const p of state.players) {
-          const prev = prevPos.get(p.id) || { x: p.x, y: p.y };
-          const x = prev.x + (p.x - prev.x) * 0.5;
-          const y = prev.y + (p.y - prev.y) * 0.5;
-          prevPos.set(p.id, { x, y });
-
-          if (p.dashing) {
-            ctx.beginPath();
-            ctx.arc(x, y, 18, 0, Math.PI * 2);
-            ctx.fillStyle = p.color;
-            ctx.globalAlpha = 0.35;
-            ctx.fill();
-            ctx.globalAlpha = 1;
-          }
-          ctx.beginPath();
-          ctx.arc(x, y, 10, 0, Math.PI * 2);
-          ctx.fillStyle = p.stunned ? '#64748b' : p.color;
-          ctx.fill();
-          ctx.lineWidth = p.id === me ? 3 : 1.5;
-          ctx.strokeStyle = p.id === me ? '#fff' : '#0b1020';
-          ctx.stroke();
-          if (p.stunned) {
-            ctx.fillStyle = '#fde047';
-            ctx.font = 'bold 14px system-ui';
-            ctx.textAlign = 'center';
-            ctx.fillText('💫', x, y - 18 + Math.sin(now / 80) * 2);
-          }
-          ctx.fillStyle = '#fff';
-          ctx.font = 'bold 11px system-ui';
-          ctx.textAlign = 'center';
-          ctx.fillText(p.name, x, y + 24);
-          if (p.id === me && p.dashReadyIn > 0) {
-            ctx.fillStyle = 'rgba(255,255,255,0.25)';
-            ctx.fillRect(x - 12, y - 18, 24, 3);
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(x - 12, y - 18, 24 * (1 - p.dashReadyIn / 1500), 3);
-          }
-        }
-
-        // hit flashes
-        for (let i = hits.length - 1; i >= 0; i--) {
-          const h = hits[i];
-          const age = (now - h.t) / 300;
-          if (age > 1) { hits.splice(i, 1); continue; }
-          ctx.beginPath();
-          ctx.arc(h.x, h.y, 12 + age * 30, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(255,255,255,${1 - age})`;
-          ctx.lineWidth = 3;
-          ctx.stroke();
-        }
-        requestAnimationFrame(draw);
-      }
-      requestAnimationFrame(draw);
-
-      // ---------- Input ----------
-      const keys = new Set();
-      const map = { ArrowUp: 'up', w: 'up', ArrowDown: 'down', s: 'down', ArrowLeft: 'left', a: 'left', ArrowRight: 'right', d: 'right', ' ': 'dash' };
-      let last = '';
-      function sendInput() {
-        const dx = (keys.has('right') ? 1 : 0) - (keys.has('left') ? 1 : 0);
-        const dy = (keys.has('down') ? 1 : 0) - (keys.has('up') ? 1 : 0);
-        const k = `${dx},${dy}`;
-        if (k !== last) { last = k; socket.emit('input', { dx, dy }); }
-      }
-      addEventListener('keydown', (e) => {
-        if (e.target === nameInput) return;
-        const k = map[e.key] ?? map[e.key.toLowerCase()];
-        if (!k) return;
-        e.preventDefault();
-        if (k === 'dash') { if (!e.repeat) socket.emit('dash'); return; }
-        keys.add(k); sendInput();
-      });
-      addEventListener('keyup', (e) => {
-        const k = map[e.key] ?? map[e.key.toLowerCase()];
-        if (!k || k === 'dash') return;
-        keys.delete(k); sendInput();
-      });
-      addEventListener('blur', () => { keys.clear(); sendInput(); });
-
-      document.querySelectorAll('#touch button').forEach((b) => {
-        const k = b.dataset.k;
-        const on = (e) => { e.preventDefault(); if (k === 'dash') socket.emit('dash'); else { keys.add(k); sendInput(); } };
-        const off = (e) => { e.preventDefault(); keys.delete(k); sendInput(); };
-        b.addEventListener('pointerdown', on);
-        b.addEventListener('pointerup', off);
-        b.addEventListener('pointercancel', off);
-        b.addEventListener('pointerleave', off);
-      });
-
-      restartBtn.addEventListener('click', () => socket.emit('restart'));
-      nameInput.addEventListener('change', () => socket.emit('rename', nameInput.value));
-      nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') nameInput.blur(); });
-    </script>
+    <script src="/shared/city.js"></script>
+    <script type="importmap">{ "imports": { "three": "/vendor/three/three.module.js" } }</script>
+    <script type="module" src="/game.js"></script>
   </body>
 </html>

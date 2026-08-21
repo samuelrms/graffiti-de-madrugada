@@ -4,10 +4,15 @@
   "private": true,
   "description": "Jogo multiplayer competitivo de graffiti no navegador",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "express": "^5.1.0",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.3"
   }
 }
