@@ -14,7 +14,7 @@
       h1 span { color: #ff2d75; text-shadow: 0 0 12px #ff2d75; }
       input { padding: 8px 10px; border-radius: 8px; border: 1px solid #334155; background: #111827; color: #fff; width: 140px; }
       #hud { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 34px; }
-      .chip { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #111827; border: 2px solid transparent; font-size: 14px; font-weight: 700; }
+      .chip { display: flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; background: #111827; border: 2px solid transparent; font-size: 14px; font-weight: 700; }
       .chip.me { border-color: #fff; }
       .chip i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
       #timer { margin-left: auto; font-size: 26px; font-weight: 900; font-variant-numeric: tabular-nums; }
@@ -83,7 +83,7 @@
       const prevPos = new Map();
 
       socket.on('welcome', (w) => { me = w.id; cfg = w; });
-      socket.on('full', () => { ovTitle.textContent = 'Muro lotado'; ovText.textContent = 'Máximo de 5 pichadores.'; });
+      socket.on('full', () => { ovTitle.textContent = 'Muro lotado'; ovText.textContent = 'Máximo de 12 pichadores.'; });
       socket.on('disconnect', () => { overlay.classList.remove('hidden'); ovTitle.textContent = 'Desconectado'; ovText.textContent = 'Recarregue a página.'; });
       socket.on('hit', (h) => hits.push({ ...h, t: performance.now() }));
       socket.on('state', (s) => {

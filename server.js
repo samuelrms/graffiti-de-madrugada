@@ -11,7 +11,7 @@ const TILE = 20; // px, client renders with same size
 const MATCH_SECONDS = 90;
 const COUNTDOWN_SECONDS = 3;
 const MIN_PLAYERS = 2;
-const MAX_PLAYERS = 5;
+const MAX_PLAYERS = 12;
 const SPEED = 180; // px/s
 const DASH_SPEED = 520;
 const DASH_MS = 220;
@@ -19,7 +19,10 @@ const DASH_COOLDOWN_MS = 1500;
 const STUN_MS = 900; // pushed player drops spray can
 const PLAYER_RADIUS = 9;
 
-const COLORS = ['#ff2d75', '#00e5ff', '#b4ff39', '#ffb300', '#b967ff'];
+const COLORS = [
+  '#ff2d75', '#00e5ff', '#b4ff39', '#ffb300', '#b967ff', '#ff6a00',
+  '#2dff9b', '#ff4dff', '#4d7cff', '#ffe600', '#ff3b3b', '#7dffea'
+];
 
 // ---------- State ----------
 const players = new Map(); // socket.id -> player
@@ -36,15 +39,13 @@ function freeSlot() {
 }
 
 function spawnPoint(slot) {
-  const spots = [
-    [3, 3],
-    [GRID_W - 4, GRID_H - 4],
-    [GRID_W - 4, 3],
-    [3, GRID_H - 4],
-    [Math.floor(GRID_W / 2), Math.floor(GRID_H / 2)]
-  ];
-  const [gx, gy] = spots[slot] || spots[4];
-  return { x: gx * TILE + TILE / 2, y: gy * TILE + TILE / 2 };
+  // Spread spawns evenly on an ellipse so 12 players never start stacked.
+  const angle = (slot / MAX_PLAYERS) * Math.PI * 2 - Math.PI / 2;
+  const cx = (GRID_W * TILE) / 2;
+  const cy = (GRID_H * TILE) / 2;
+  const rx = cx - TILE * 3;
+  const ry = cy - TILE * 3;
+  return { x: cx + Math.cos(angle) * rx, y: cy + Math.sin(angle) * ry };
 }
 
 function resetPlayer(p) {

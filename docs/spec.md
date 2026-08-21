@@ -3,8 +3,8 @@
 ## Identidade
 
 - **Nome do jogo:** Graffiti de Madrugada
-- **Elevator pitch:** De 2 a 5 pichadores disputam um muro por 90 segundos; andar picha, empurrão derruba a lata do rival; maior área vence.
-- **Participantes:** 2–5 jogadores
+- **Elevator pitch:** De 2 a 12 pichadores disputam um muro por 90 segundos; andar picha, empurrão derruba a lata do rival; maior área vence.
+- **Participantes:** 2–12 jogadores
 - **Estilo:** 2D (canvas)
 - **Bibliotecas escolhidas:** Node 22, Express 5, Socket.IO 4, Canvas 2D puro
 - **Porta interna do jogo:** 8080

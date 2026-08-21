@@ -2,7 +2,7 @@
 
 Jogo multiplayer competitivo no navegador para o Hackathon de Jogos (21/08/2026).
 
-De 2 a 5 pichadores disputam o mesmo muro durante uma noite de 90 segundos. Andar
+De 2 a 12 pichadores disputam o mesmo muro durante uma noite de 90 segundos. Andar
 deixa spray da sua cor; passar por cima do spray alheio rouba o pedaço. Com
 **Espaço** você dá um empurrão: quem for atingido derruba a lata e fica parado por
 quase um segundo. Quando o sol nasce, vence quem tiver a maior área do muro.
@@ -29,7 +29,7 @@ docker compose logs -f tunnel
 
 | Item | Valor |
 | --- | --- |
-| Jogadores | 2 a 5 (a partida começa sozinha quando o segundo entra) |
+| Jogadores | 2 a 12 (a partida começa sozinha quando o segundo entra) |
 | Duração | 3 s de contagem + 90 s de partida |
 | Objetivo | Ter mais pedaços de muro pichados quando o tempo acabar |
 | Reinício | Botão **Outra noite** na tela final (qualquer jogador) |
