@@ -181,13 +181,13 @@ test('teams: balanced assignment, rebalanced on leave, no friendly fire, team wi
   const b = await add(false);
   const c = await add(false);
   const d = await add(false);
-  await until(() => room.size === 4 && a.state.players.length === 4);
+  await until(() => room.size === 4 && a.state?.players.length === 4);
   const teamsOf = () => a.state.players.map((p) => p.team);
   assert.deepEqual(teamsOf(), [0, 1, 0, 1]);
   assert.equal(me(a).color, me(c).color, 'teammates share the team colour');
   assert.notEqual(me(a).color, me(b).color);
   d.socket.emit('leave');
-  await until(() => a.state.players.length === 3);
+  await until(() => a.state?.players.length === 3);
   assert.deepEqual(teamsOf().sort(), [0, 0, 1]);
   for (const x of [a, b, c]) x.socket.emit('ready', true);
   await until(() => room.phase === 'playing');
