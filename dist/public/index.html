@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Graffiti de Madrugada</title>
+    <meta name="description" content="Jogo multiplayer 3D no navegador: de 2 a 12 pichadores disputam uma cidade aberta. Piche paredes, escale prédios, derrube rivais." />
+    <meta name="theme-color" content="#07060d" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Graffiti de Madrugada" />
+    <meta property="og:title" content="Graffiti de Madrugada — multiplayer 3D no navegador" />
+    <meta property="og:description" content="De 2 a 12 pichadores disputam uma cidade aberta por 3 minutos. Piche paredes, escale prédios, derrube rivais. Sem instalar nada." />
+    <meta property="og:url" content="https://graffiti-de-madrugada.onrender.com/" />
+    <meta property="og:image" content="https://graffiti-de-madrugada.onrender.com/og.jpg" />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="720" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Graffiti de Madrugada" />
+    <meta name="twitter:description" content="Multiplayer 3D no navegador: piche, escale, derrube rivais." />
+    <meta name="twitter:image" content="https://graffiti-de-madrugada.onrender.com/og.jpg" />
+    <script type="module" crossorigin src="/assets/index-B5MiL_LU.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BztmVg2X.css">
+  </head>
+  <body>
+
+    <div id="ui">
+      <div id="top">
+        <h1><img src="/favicon.svg" alt="" width="26" height="26" /> GRAFFITI <span>DE MADRUGADA</span></h1>
+        <span id="roomBadge"></span>
+        <span id="timer">--</span>
+      </div>
+      <div id="board"></div>
+      <input id="name" maxlength="12" placeholder="Seu nome" aria-label="Seu nome" />
+      <div id="cross"></div>
+      <div id="push"><i></i></div>
+      <div id="dmg"></div>
+      <div id="bottomleft">
+        <div id="hpText">100</div>
+        <div id="hp"><i></i></div>
+        <div id="armor"><i></i></div>
+        <div id="buffs"></div>
+      </div>
+      <div id="bottomright">
+        <div id="tool"></div>
+        <div id="power"></div>
+      </div>
+      <div id="hint"><kbd>WASD</kbd> andar · <kbd>Shift</kbd> correr · <kbd>Mouse</kbd> olhar · <kbd>Espaço</kbd> pular / segurar na parede = escalar · <kbd>Clique</kbd> usar · <kbd>1</kbd>/<kbd>2</kbd> spray/arma · <kbd>F</kbd> soco · <kbd>Q</kbd> poder</div>
+      <div id="touch">
+        <div id="stick"><i></i></div>
+        <div id="tbtns">
+          <button data-t="fire" aria-label="Usar"></button>
+          <button data-t="jump" aria-label="Pular / escalar"></button>
+          <button data-t="melee" aria-label="Soco"></button>
+          <button data-t="power" aria-label="Poder">Q</button>
+          <button data-t="swap" aria-label="Trocar ferramenta"></button>
+        </div>
+      </div>
+      <div id="stun"></div>
+      <div id="toast"></div>
+      <div id="feed"></div>
+      <div id="home" class="hidden">
+        <div class="homeCard">
+          <h2><img src="/favicon.svg" alt="" width="34" height="34" /> Graffiti de Madrugada</h2>
+          <p class="lead">Multiplayer 3D no navegador. Piche paredes, escale prédios, derrube rivais — de 2 a 12 por sala.</p>
+          <label class="field">Seu nome <input id="homeName" maxlength="12" placeholder="Crew…" /></label>
+          <div class="homeGrid">
+            <section>
+              <h3>Salas abertas</h3>
+              <ul id="roomList"><li class="empty">Carregando…</li></ul>
+            </section>
+            <section>
+              <h3>Criar sala</h3>
+              <form id="createForm">
+                <input id="roomName" maxlength="24" placeholder="Nome da sala" />
+                <label class="check"><input id="roomLocked" type="checkbox" /> <span id="lockLabel">Trancada</span></label>
+                <button id="createBtn" type="submit">Criar sala</button>
+              </form>
+              <h3>Entrar por ID ou nome</h3>
+              <form id="joinForm">
+                <input id="joinKey" maxlength="24" placeholder="abc123 ou nome da sala" autocapitalize="off" />
+                <button id="joinBtn" type="submit">Entrar</button>
+              </form>
+              <p id="homeError" class="error"></p>
+            </section>
+          </div>
+          <p class="hint">Sala trancada não aparece na lista: só entra quem tiver o link.</p>
+        </div>
+      </div>
+      <div id="overlay">
+        <div>
+          <h2 id="ovTitle">Conectando…</h2>
+          <p id="ovText"></p>
+          <div id="lobby" style="display:none">
+            <p id="lobbyRoom"></p>
+            <p class="roomActions"><button id="copyLink" class="ghost">copiar link</button><button id="leaveBtn" class="ghost">sair da sala</button></p>
+            <input id="lobbyName" maxlength="12" placeholder="Seu nome" aria-label="Seu nome" />
+            <button id="ready">Pronto!</button>
+            <ul id="lobbyList"></ul>
+            <p id="lobbyHint"></p>
+          </div>
+          <button id="restart" style="display:none">Voltar ao lobby</button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
