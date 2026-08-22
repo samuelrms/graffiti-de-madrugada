@@ -75,6 +75,8 @@ export function updateHud(): void {
   }
 
   const ov = $('#overlay');
+  ov.classList.toggle('light', state.phase === 'countdown' || (state.phase === 'playing' && !!ms?.dead));
+  document.body.classList.toggle('menu', state.phase === 'lobby' || state.phase === 'ended');
   $('#lobby').style.display = state.phase === 'lobby' ? 'block' : 'none';
   if (state.phase === 'lobby') {
     ov.classList.remove('hidden');
