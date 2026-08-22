@@ -7,7 +7,15 @@ import { socket } from '../net/socket.ts';
 import { $, net } from '../core/state.ts';
 
 const NAME_KEY = 'gdm:name';
+const CLIENT_KEY = 'gdm:client';
 let pollTimer = 0;
+
+/** Per-browser token: the server allows one player per token (no multi-tab). */
+export function clientToken(): string {
+  let t = localStorage.getItem(CLIENT_KEY);
+  if (!t) { t = crypto.randomUUID(); localStorage.setItem(CLIENT_KEY, t); }
+  return t;
+}
 
 export function roomIdFromUrl(): string | null {
   const m = location.hash.match(/[#&]r=([a-z0-9]{4,12})/i);
@@ -21,7 +29,7 @@ export function joinRoom(key: string): void {
   const name = playerName();
   if (name) localStorage.setItem(NAME_KEY, name);
   $('#homeError').textContent = '';
-  socket.emit('join', { room: key, name: name || undefined });
+  socket.emit('join', { room: key, name: name || undefined, client: clientToken() });
 }
 
 export async function createRoom(name: string, locked: boolean): Promise<void> {
@@ -61,7 +69,9 @@ async function refreshRooms(): Promise<void> {
 const JOIN_ERROR: Record<JoinError, string> = {
   'not-found': 'Sala não encontrada. Confira o ID ou o nome (salas trancadas só entram pelo link).',
   full: 'Sala cheia (12 pichadores).',
-  invalid: 'Digite o ID ou o nome da sala.'
+  invalid: 'Digite o ID ou o nome da sala.',
+  duplicate: 'Você já está jogando em outra aba deste navegador. Feche a outra aba para entrar.',
+  'ip-limit': 'Já existe um jogador conectado a partir desta rede/IP.'
 };
 
 export function setupHome(): void {
@@ -103,16 +113,44 @@ export function setupHome(): void {
     renderRoomBadge(w.room);
   });
   socket.on('roomInfo', renderRoomBadge);
-  socket.on('connect', () => {
-    // Deep link: join straight away; otherwise show the home.
+  socket.on('roomClosed', () => {
+    net.cfg = null;
+    showHome();
+    $('#homeError').textContent = 'A sala foi fechada pelo dono.';
+  });
+  $('#modeForm').addEventListener('change', () => {
+    const mode = $<HTMLSelectElement>('#modeSelect').value as 'ffa' | 'teams';
+    const teams = Number($<HTMLSelectElement>('#teamsSelect').value);
+    $('#teamsSelect').style.display = mode === 'teams' ? '' : 'none';
+    socket.emit('setMode', { mode, teams });
+  });
+  $('#closeRoom').addEventListener('click', () => socket.emit('closeRoom'));
+  // Deep link: join straight away; otherwise show the home. The socket may have
+  // connected while the (heavy) scene was still being built, so check both ways.
+  const onConnect = () => {
     const id = roomIdFromUrl();
     if (id && !net.cfg) joinRoom(id); else if (!net.cfg) showHome();
-  });
+  };
+  socket.on('connect', onConnect);
+  if (socket.connected) onConnect();
 }
 
+export const room = { info: null as RoomInfo | null };
+export const isOwner = () => !!room.info && room.info.ownerId === net.me;
+
 function renderRoomBadge(r: RoomInfo): void {
-  $('#roomBadge').innerHTML = `${r.locked ? I.lock(14) : I.users(14)} <b>${esc(r.name)}</b> <code>${r.id}</code> <button id="copyLinkInline">${I.link(14)}</button>`;
+  room.info = r;
+  const modeTxt = r.mode === 'teams' ? `${r.teams} equipes` : 'todos contra todos';
+  $('#roomBadge').innerHTML = `${r.locked ? I.lock(14) : I.users(14)} <b>${esc(r.name)}</b> <code>${r.id}</code> · ${modeTxt} <button id="copyLinkInline">${I.link(14)}</button>`;
   $('#copyLinkInline').addEventListener('click', () => $('#copyLink').click());
   $('#copyLink').innerHTML = `${I.link(14)} copiar link`;
-  $('#lobbyRoom').innerHTML = `${r.locked ? I.lock(16) : I.users(16)} ${esc(r.name)} · <code>${r.id}</code>${r.locked ? ' · trancada' : ''}`;
+  $('#lobbyRoom').innerHTML = `${r.locked ? I.lock(16) : I.users(16)} ${esc(r.name)} · <code>${r.id}</code>${r.locked ? ' · trancada' : ''} · ${modeTxt}`;
+  const owner = isOwner();
+  $('#ownerBox').style.display = owner ? '' : 'none';
+  $('#closeRoom').style.display = owner ? '' : 'none';
+  if (owner) {
+    $<HTMLSelectElement>('#modeSelect').value = r.mode;
+    $<HTMLSelectElement>('#teamsSelect').value = String(r.teams);
+    $('#teamsSelect').style.display = r.mode === 'teams' ? '' : 'none';
+  }
 }

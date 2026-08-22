@@ -13,3 +13,5 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: MAX_PER_IP
+        value: "1"

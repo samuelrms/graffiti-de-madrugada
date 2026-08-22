@@ -23,8 +23,8 @@
     <meta name="twitter:title" content="Graffiti de Madrugada" />
     <meta name="twitter:description" content="Multiplayer 3D no navegador: piche, escale, derrube rivais." />
     <meta name="twitter:image" content="https://graffiti-de-madrugada.onrender.com/og.jpg" />
-    <script type="module" crossorigin src="/assets/index-B5MiL_LU.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BztmVg2X.css">
+    <script type="module" crossorigin src="/assets/index-FZNHteJI.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CUYkQqHM.css">
   </head>
   <body>
 
@@ -98,12 +98,18 @@
           <div id="lobby" style="display:none">
             <p id="lobbyRoom"></p>
             <p class="roomActions"><button id="copyLink" class="ghost">copiar link</button><button id="leaveBtn" class="ghost">sair da sala</button></p>
+            <div id="ownerBox" style="display:none"><form id="modeForm" class="ownerBox" aria-label="Configurações do dono">
+              <span>Modo</span>
+              <select id="modeSelect"><option value="ffa">Todos contra todos</option><option value="teams">Equipes</option></select>
+              <select id="teamsSelect" style="display:none"><option value="2">2 equipes</option><option value="3">3 equipes</option><option value="4">4 equipes</option></select>
+            </form></div>
             <input id="lobbyName" maxlength="12" placeholder="Seu nome" aria-label="Seu nome" />
             <button id="ready">Pronto!</button>
             <ul id="lobbyList"></ul>
             <p id="lobbyHint"></p>
           </div>
           <button id="restart" style="display:none">Voltar ao lobby</button>
+          <button id="closeRoom" class="danger" style="display:none">Fechar sala</button>
         </div>
       </div>
     </div>

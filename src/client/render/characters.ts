@@ -35,6 +35,7 @@ export interface Character {
   lastTag: number;
   lastOp: number;
   emissive: THREE.Color;
+  color: string;
 }
 
 function box(w: number, h: number, d: number, color: THREE.ColorRepresentation, x = 0, y = 0, z = 0): StdMesh {
@@ -98,7 +99,7 @@ export function buildCharacter(slot: number, colorHex: string): Character {
   return {
     group: g,
     parts: { body, legL, legR, armL, armR, torso, can, gun, bazooka, tag, tagCv, bubble },
-    t: Math.random() * 10, lastTag: 0, lastOp: 1, emissive: torso.material.emissive.clone()
+    t: Math.random() * 10, lastTag: 0, lastOp: 1, emissive: torso.material.emissive.clone(), color: colorHex
   };
 }
 

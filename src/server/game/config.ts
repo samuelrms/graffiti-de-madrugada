@@ -11,6 +11,8 @@ export interface GameOptions {
   minPlayers: number;
   maxPlayers: number;
   validateMovement: boolean;
+  /** simultaneous players allowed from one IP (0 = unlimited); browsers are always limited to one tab */
+  maxPerIp: number;
   quiet: boolean;
   /** directory with the built client (index.html + assets); undefined = API only */
   staticDir?: string;
@@ -25,6 +27,7 @@ export const DEFAULTS: GameOptions = {
   minPlayers: 2,
   maxPlayers: 12,
   validateMovement: true,
+  maxPerIp: Number(process.env.MAX_PER_IP ?? 1),
   quiet: false
 };
 

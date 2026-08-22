@@ -23,7 +23,7 @@ async function shot(page: Page, name: string): Promise<void> {
 const city = C.generateCity();
 
 (async () => {
-  const game = createGame({ port: 0, quiet: true, countdownSeconds: 1, matchSeconds: 600, staticDir });
+  const game = createGame({ port: 0, quiet: true, countdownSeconds: 1, matchSeconds: 600, staticDir, maxPerIp: 0 });
   await game.ready;
   const url = `http://localhost:${game.port}`;
   const browser = await B.launch({ width: 1280, height: 720 });
@@ -51,6 +51,14 @@ const city = C.generateCity();
     await a.bringToFront();
     await shot(a, 'lobby');
     console.log('lobby.jpg');
+    // Owner switches to 2 teams for the teams shot, then back to free-for-all.
+    await a.select('#modeSelect', 'teams');
+    await a.waitForFunction(() => window.DBG.state().players.every((p: any) => p.team >= 0), { polling: 200 });
+    await B.sleep(400);
+    await shot(a, 'equipes');
+    console.log('equipes.jpg');
+    await a.select('#modeSelect', 'ffa');
+    await a.waitForFunction(() => window.DBG.state().players.every((p: any) => p.team === -1), { polling: 200 });
 
     await B.ready(a);
     await B.waitPhase(a, 'playing');
@@ -128,11 +136,11 @@ const city = C.generateCity();
     console.log('kill.jpg', await B.me(a).then((m: any) => ({ kills: m.kills, score: m.score })));
 
     // Touch layout: emulate a phone.
-    const m = await browser.newPage();
+    const m = await (await browser.createBrowserContext()).newPage();
     await m.emulate({ viewport: { width: 844, height: 390, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148' });
     await m.evaluateOnNewDocument(() => { Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 5 }); });
-    await m.goto(`${url}/#r=${roomId}`, { waitUntil: 'networkidle0' });
-    await m.waitForFunction(() => window.DBG && window.DBG.state().players.length > 0, { polling: 200 });
+    await m.goto(`${url}/#r=${roomId}`, { waitUntil: 'load', timeout: 90000 });
+    await m.waitForFunction(() => window.DBG && window.DBG.state().players.length > 0, { polling: 200, timeout: 60000 });
     await m.evaluate(() => { document.querySelector('#overlay')!.classList.add('hidden'); });
     await B.sleep(400);
     await m.screenshot({ path: path.join(OUT, 'toque.jpg'), type: 'jpeg', quality: 82 });

@@ -110,3 +110,12 @@ button.ghost { margin: 0; padding: 5px 12px; font-size: 13px; background: rgba(2
 
 /* Outside a room only the home card is visible */
 body:not(.inroom) #ui > :not(#home) { display: none !important; }
+
+/* ---------- Owner / teams ---------- */
+.ownerBox { display: flex; gap: 8px; align-items: center; justify-content: center; margin: 0 0 10px; font-size: 13px; color: #cbd5e1; }
+.ownerBox select { padding: 6px 10px; border-radius: 8px; border: 1px solid #334155; background: #0b0a14; color: #fff; font-weight: 700; }
+button.danger { background: #2b1020; color: #ff6a6a; box-shadow: none; border: 1px solid #ff3b3b; margin-left: 8px; }
+.chip.team { font-size: 15px; border-color: rgba(255,255,255,0.25); }
+.chip.sub { font-size: 12px; padding: 2px 8px; margin-left: 10px; opacity: 0.9; }
+#lobbyList li.teamHead { background: transparent; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; padding: 8px 0 2px; }
+#lobbyList li small { color: #ffb300; font-size: 11px; display: inline-flex; align-items: center; gap: 3px; }

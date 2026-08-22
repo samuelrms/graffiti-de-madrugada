@@ -49,6 +49,7 @@ function frame(now: number): void {
   for (const p of net.state.players) {
     seen.add(p.id);
     let ch = remote.get(p.id);
+    if (ch && ch.color !== p.color) { scene.remove(ch.group); remote.delete(p.id); ch = undefined; } // team colour changed
     if (!ch) { ch = buildCharacter(p.slot, p.color); scene.add(ch.group); remote.set(p.id, ch); }
     const isMe = p.id === net.me;
     target.set(isMe ? player.x : p.x, isMe ? player.y : p.y, isMe ? player.z : p.z);

@@ -1,5 +1,6 @@
 // DOM HUD: scoreboard, timer, health, tools, lobby, end screen, kill feed, toasts.
-import type { KilledEvent, PowerName } from '../../shared/protocol.ts';
+import { TEAM_COLORS, TEAM_NAMES, type KilledEvent, type PowerName } from '../../shared/protocol.ts';
+import { isOwner, room } from './home.ts';
 import { I, KILL_ICON, POWER_ICON } from './icons.ts';
 import { $, myState, net, player } from '../core/state.ts';
 
@@ -37,12 +38,22 @@ let dmgFlashUntil = 0;
 export function flashDamage(): void { dmgFlashUntil = performance.now() + 150; }
 export function isFlashing(now: number): boolean { return now < dmgFlashUntil; }
 
+interface TeamTotal { team: number; name: string; color: string; score: number; players: number }
+export function teamTotals(): TeamTotal[] {
+  const n = room.info?.teams ?? 0;
+  const out: TeamTotal[] = Array.from({ length: n }, (_, i) => ({ team: i, name: TEAM_NAMES[i], color: TEAM_COLORS[i], score: 0, players: 0 }));
+  for (const p of net.state.players) if (p.team >= 0 && p.team < n) { out[p.team].score += p.score; out[p.team].players++; }
+  return out.sort((a, b) => b.score - a.score);
+}
+
 export function updateHud(): void {
   const state = net.state;
   const ms = myState();
   const sorted = [...state.players].sort((a, b) => b.score - a.score);
-  $('#board').innerHTML = sorted.map((p) =>
-    `<span class="chip${p.id === net.me ? ' me' : ''}${p.dead ? ' dead' : ''}"><i style="background:${p.color}"></i>${esc(p.name)}<b>${p.score}</b></span>`
+  const teamsMode = room.info?.mode === 'teams';
+  const teamRows = teamsMode ? teamTotals().map((t) => `<span class="chip team"><i style="background:${t.color}"></i>${t.name}<b>${t.score}</b></span>`).join('') : '';
+  $('#board').innerHTML = teamRows + sorted.map((p) =>
+    `<span class="chip${p.id === net.me ? ' me' : ''}${p.dead ? ' dead' : ''}${teamsMode ? ' sub' : ''}"><i style="background:${p.color}"></i>${esc(p.name)}<b>${p.score}</b></span>`
   ).join('');
   $('#timer').innerHTML = state.phase === 'playing' ? `${I.moon(26)} ${fmt(state.timeLeft)}` : state.phase === 'countdown' ? 'Chacoalha a lata' : '--';
 
@@ -70,9 +81,17 @@ export function updateHud(): void {
     $('#ovTitle').textContent = 'Lobby da crew';
     const readyCount = state.players.filter((p) => p.ready).length;
     $('#ovText').textContent = `${state.players.length} na rua · ${readyCount} prontos — compartilhe o link`;
-    $('#lobbyList').innerHTML = state.players.map((p) =>
-      `<li class="${p.ready ? 'ok' : ''}"><i style="background:${p.color}"></i>${esc(p.name)}${p.id === net.me ? ' (você)' : ''}<b>${p.ready ? `${I.check(14)} PRONTO` : 'esperando'}</b></li>`
-    ).join('');
+    const row = (p: typeof state.players[number]) =>
+      `<li class="${p.ready ? 'ok' : ''}"><i style="background:${p.color}"></i>${esc(p.name)}${p.id === net.me ? ' (você)' : ''}${p.id === room.info?.ownerId ? ` <small>${I.crown(12)} dono</small>` : ''}<b>${p.ready ? `${I.check(14)} PRONTO` : 'esperando'}</b></li>`;
+    if (room.info?.mode === 'teams') {
+      const n = room.info.teams;
+      $('#lobbyList').innerHTML = Array.from({ length: n }, (_, t) =>
+        `<li class="teamHead" style="color:${TEAM_COLORS[t]}">Equipe ${TEAM_NAMES[t]}</li>` + state.players.filter((p) => p.team === t).map(row).join('')
+      ).join('');
+    } else {
+      $('#lobbyList').innerHTML = state.players.map(row).join('');
+    }
+    $('#ownerBox').style.display = isOwner() ? '' : 'none';
     const min = net.cfg?.minPlayers ?? 2;
     $('#lobbyHint').textContent = state.players.length < min ? `Precisa de pelo menos ${min} jogadores.` : readyCount < state.players.length ? 'A noite começa quando todos estiverem prontos.' : 'Começando…';
     $('#restart').style.display = 'none';
@@ -87,8 +106,10 @@ export function updateHud(): void {
     const w = state.winner;
     $('#ovTitle').innerHTML = w && w.name !== 'Empate' ? `${I.trophy(34)} <span style="color:${w.color}">${esc(w.name)}</span> dominou a cidade!` : `${I.tie(34)} Empate!`;
     const ranked = [...state.players].sort((a, b) => b.score - a.score);
-    $('#ovText').innerHTML = ranked.map((p, i) => `${i + 1}. <span style="color:${p.color}">${esc(p.name)}</span> — ${p.score} pts · ${p.tiles} tiles · ${p.kills} kills`).join('<br>');
+    const teamLines = room.info?.mode === 'teams' ? teamTotals().map((t, i) => `<b style="color:${t.color}">${i + 1}. Equipe ${t.name} — ${t.score} pts</b>`).join('<br>') + '<br>' : '';
+    $('#ovText').innerHTML = teamLines + ranked.map((p, i) => `${i + 1}. <span style="color:${p.color}">${esc(p.name)}</span> — ${p.score} pts · ${p.tiles} tiles · ${p.kills} kills`).join('<br>');
     $('#restart').style.display = 'inline-block';
+    $('#closeRoom').style.display = isOwner() ? 'inline-block' : 'none';
     document.exitPointerLock?.();
   } else if (ms?.dead) {
     ov.classList.remove('hidden');

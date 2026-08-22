@@ -7,6 +7,7 @@ export const DEFAULTS = {
     minPlayers: 2,
     maxPlayers: 12,
     validateMovement: true,
+    maxPerIp: Number(process.env.MAX_PER_IP ?? 1),
     quiet: false
 };
 export const PAINT_RANGE = 4.5;
