@@ -43,6 +43,20 @@ export function createGame(opts: Partial<GameOptions> = {}): Game {
   const app = express();
   app.set('trust proxy', true); // Render / Cloudflare tunnel put the client IP in X-Forwarded-For
   app.use(express.json({ limit: '4kb' }));
+
+  // SEO: one canonical host. Page requests on another host (e.g. *.onrender.com) are redirected.
+  const canonicalHost = new URL(cfg.publicUrl).host;
+  app.use((req, res, next) => {
+    if (cfg.canonicalRedirect && req.method === 'GET' && req.hostname !== canonicalHost && !req.hostname.startsWith('localhost') && req.path !== '/health' && !req.path.startsWith('/socket.io')) {
+      res.redirect(301, `${cfg.publicUrl}${req.originalUrl}`);
+      return;
+    }
+    next();
+  });
+  app.get('/robots.txt', (_req, res) => { res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${cfg.publicUrl}/sitemap.xml\n`); });
+  app.get('/sitemap.xml', (_req, res) => {
+    res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${cfg.publicUrl}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url></urlset>\n`);
+  });
   app.get('/health', (_req, res) => { res.json({ ok: true, rooms: rooms.size }); });
 
   /** Public rooms only; locked rooms are reachable by id alone. */

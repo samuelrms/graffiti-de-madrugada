@@ -5,6 +5,7 @@ services:
     environment:
       # Players allowed from one IP (0 = unlimited). Raise it when everyone shares a Wi-Fi/NAT.
       MAX_PER_IP: ${MAX_PER_IP:-1}
+      PUBLIC_URL: ${PUBLIC_URL:-https://graffitidemadrugada.samuelramos.dev}
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:8080/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 5s

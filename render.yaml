@@ -15,3 +15,9 @@ services:
         value: production
       - key: MAX_PER_IP
         value: "1"
+      - key: PUBLIC_URL
+        value: https://graffitidemadrugada.samuelramos.dev
+      - key: VITE_PUBLIC_URL
+        value: https://graffitidemadrugada.samuelramos.dev
+      - key: CANONICAL_REDIRECT
+        value: "0"

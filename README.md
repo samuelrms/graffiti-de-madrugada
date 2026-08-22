@@ -1,9 +1,9 @@
 # Graffiti de Madrugada
 
 [![CI](https://github.com/samuelrms/graffiti-de-madrugada/actions/workflows/ci.yml/badge.svg)](https://github.com/samuelrms/graffiti-de-madrugada/actions/workflows/ci.yml)
-[![Jogar agora](https://img.shields.io/badge/jogar-graffiti--de--madrugada.onrender.com-ff2d75)](https://graffiti-de-madrugada.onrender.com/)
+[![Jogar agora](https://img.shields.io/badge/jogar-graffitidemadrugada.samuelramos.dev-ff2d75)](https://graffitidemadrugada.samuelramos.dev/)
 
-**Jogue agora: <https://graffiti-de-madrugada.onrender.com/>** (plano free: o primeiro acesso pode levar ~40 s para acordar o servidor).
+**Jogue agora: <https://graffitidemadrugada.samuelramos.dev/>** (plano free: o primeiro acesso pode levar ~40 s para acordar o servidor).
 
 Jogo multiplayer 3D competitivo no navegador. De 2 a 12 pichadores por sala
 disputam uma cidade aberta durante uma noite de 3 minutos: pichar paredes dá
@@ -211,12 +211,12 @@ src/
     protocol.ts      tipos de todos os eventos do socket e da API (fonte única da verdade)
   server/
     index.ts         entrada: serve dist/public e sobe o servidor
-    http/server.ts   Express + Socket.IO, /health, /api/rooms, registro e ciclo de vida das salas
+    http/server.ts   Express + Socket.IO, /health, /api/rooms, robots/sitemap, redirect canônico, salas
     game/room.ts     uma partida: jogadores, pintura, combate, pickups, fases
     game/config.ts   constantes de balanceamento (armas, poderes, pickups, limites)
     game/geometry.ts raycast contra prédios/jogadores e validação de movimento
   client/
-    index.html       página, meta tags (Open Graph, favicon, manifest)
+    index.html       página, SEO (canonical, Open Graph, Twitter, JSON-LD), favicon, manifest
     main.ts          loop de simulação (timer) e de render (rAF)
     style.css        HUD, home, lobby, toque
     core/state.ts    estado mutável compartilhado entre módulos do cliente
@@ -280,7 +280,23 @@ Configuração única (painel do Render, sem cartão): **New → Blueprint** →
 repositório → o [`render.yaml`](render.yaml) cria o serviço (auto-deploy desligado:
 quem publica é o CI). Depois, no serviço: **Settings → Deploy Hook → copiar** e
 `gh secret set RENDER_DEPLOY_HOOK`. Se o domínio for outro:
-`gh variable set RENDER_URL --body https://SEU.onrender.com`.
+`gh variable set RENDER_URL --body https://SEU.dominio`.
+
+### Domínio próprio e SEO
+
+O plano free do Render aceita domínio personalizado com TLS automático:
+
+1. No serviço: **Settings → Custom Domains → Add** → `graffitidemadrugada.samuelramos.dev`.
+2. No DNS de `samuelramos.dev`: `CNAME graffitidemadrugada → graffiti-de-madrugada.onrender.com`.
+3. Espere o Render verificar e emitir o certificado (alguns minutos).
+4. Ligue o redirect do endereço antigo: variável `CANONICAL_REDIRECT=1` no Render
+   (páginas em `*.onrender.com` passam a responder 301 para o domínio; `/health`
+   e o socket não são redirecionados).
+
+A URL canônica vem de `PUBLIC_URL` (servidor: `robots.txt`, `sitemap.xml`,
+redirect) e `VITE_PUBLIC_URL` (cliente, no build: `canonical`, Open Graph,
+Twitter Card, JSON-LD `VideoGame`). O padrão é o domínio acima; `.env` e
+`render.yaml` já trazem os valores.
 
 ## Fora do escopo
 
