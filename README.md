@@ -299,10 +299,22 @@ O plano free do Render aceita domínio personalizado com TLS automático:
    domínio; `/health` e o socket não são redirecionados. O CI valida o deploy
    no domínio final.
 
-A URL canônica vem de `PUBLIC_URL` (servidor: `robots.txt`, `sitemap.xml`,
-redirect) e `VITE_PUBLIC_URL` (cliente, no build: `canonical`, Open Graph,
-Twitter Card, JSON-LD `VideoGame`). O padrão é o domínio acima; `.env` e
-`render.yaml` já trazem os valores.
+A URL canônica vem de `PUBLIC_URL` (servidor) e `VITE_PUBLIC_URL` (cliente, no
+build). O padrão é o domínio acima; `.env` e `render.yaml` já trazem os valores.
+
+O que está coberto para buscadores, redes sociais e assistentes de IA:
+
+| Camada | Onde |
+| --- | --- |
+| `title`, `description`, `keywords`, `robots`, `canonical`, `theme-color`, manifest com categorias e screenshot | `src/client/index.html`, `public/manifest.webmanifest` |
+| Open Graph completo (imagem 1280×720 com alt) e Twitter Card | `index.html` |
+| JSON-LD `@graph`: `WebSite`, `Person`, `VideoGame` (grátis, 2–12 jogadores, plataforma, repositório) e `FAQPage` | `index.html` |
+| Conteúdo real sem JS: `h1`, resumo, "Como jogar" e FAQ visíveis na home | `index.html` |
+| `robots.txt` liberando buscadores e crawlers de IA (GPTBot, ClaudeBot, PerplexityBot, Google-Extended…), `sitemap.xml`, `llms.txt`, `.well-known/security.txt` | `src/server/http/server.ts` |
+| Redirect 301 do host antigo, gzip/brotli, `Cache-Control` imutável para assets com hash e `no-cache` no HTML | `server.ts` |
+
+Para fechar o ciclo fora do código: enviar o sitemap no Google Search Console e
+no Bing Webmaster Tools, e validar o preview do link no LinkedIn Post Inspector.
 
 ## Fora do escopo
 

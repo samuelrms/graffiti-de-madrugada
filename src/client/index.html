@@ -31,25 +31,68 @@
     <meta name="twitter:description" content="Multiplayer 3D no navegador: piche, escale, derrube rivais." />
     <meta name="twitter:image" content="%VITE_PUBLIC_URL%/og.jpg" />
     <meta name="twitter:image:alt" content="Cidade noturna do jogo Graffiti de Madrugada vista da rua" />
+    <meta name="application-name" content="Graffiti de Madrugada" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Graffiti" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "VideoGame",
-      "name": "Graffiti de Madrugada",
-      "url": "%VITE_PUBLIC_URL%/",
-      "image": "%VITE_PUBLIC_URL%/og.jpg",
-      "description": "Jogo multiplayer 3D gratuito no navegador: até 12 pichadores disputam uma cidade aberta. Piche paredes, escale prédios, derrube rivais, jogue em equipes.",
-      "genre": ["Action", "Multiplayer"],
-      "gamePlatform": "Web browser",
-      "applicationCategory": "Game",
-      "operatingSystem": "Any",
-      "playMode": "MultiPlayer",
-      "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 2, "maxValue": 12 },
-      "inLanguage": "pt-BR",
-      "isAccessibleForFree": true,
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "BRL" },
-      "author": { "@type": "Person", "name": "Samuel Ramos", "url": "https://samuelramos.dev" },
-      "codeRepository": "https://github.com/samuelrms/graffiti-de-madrugada"
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "%VITE_PUBLIC_URL%/#website",
+          "url": "%VITE_PUBLIC_URL%/",
+          "name": "Graffiti de Madrugada",
+          "description": "Jogo multiplayer 3D gratuito no navegador: até 12 pichadores disputam uma cidade aberta.",
+          "inLanguage": "pt-BR",
+          "publisher": { "@id": "https://samuelramos.dev/#person" }
+        },
+        {
+          "@type": "Person",
+          "@id": "https://samuelramos.dev/#person",
+          "name": "Samuel Ramos",
+          "url": "https://samuelramos.dev",
+          "sameAs": ["https://github.com/samuelrms"]
+        },
+        {
+          "@type": "VideoGame",
+          "@id": "%VITE_PUBLIC_URL%/#game",
+          "name": "Graffiti de Madrugada",
+          "alternateName": "Graffiti de Madrugada: multiplayer 3D no navegador",
+          "url": "%VITE_PUBLIC_URL%/",
+          "image": "%VITE_PUBLIC_URL%/og.jpg",
+          "screenshot": "%VITE_PUBLIC_URL%/og.jpg",
+          "description": "Jogo multiplayer 3D gratuito no navegador: até 12 pichadores disputam uma cidade aberta por 3 minutos. Piche paredes, escale prédios, derrube rivais com armas de tinta e poderes, jogue todos contra todos ou em equipes.",
+          "genre": ["Action", "Multiplayer", "Arcade"],
+          "keywords": "jogo multiplayer navegador, jogo 3D browser, graffiti, io game, webgl, three.js",
+          "gamePlatform": ["Web browser", "Desktop", "Mobile"],
+          "applicationCategory": "GameApplication",
+          "operatingSystem": "Any",
+          "browserRequirements": "Requires WebGL",
+          "playMode": "MultiPlayer",
+          "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 2, "maxValue": 12 },
+          "inLanguage": "pt-BR",
+          "isAccessibleForFree": true,
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "BRL", "availability": "https://schema.org/InStock" },
+          "author": { "@id": "https://samuelramos.dev/#person" },
+          "publisher": { "@id": "https://samuelramos.dev/#person" },
+          "codeRepository": "https://github.com/samuelrms/graffiti-de-madrugada",
+          "license": "https://github.com/samuelrms/graffiti-de-madrugada",
+          "isPartOf": { "@id": "%VITE_PUBLIC_URL%/#website" }
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "%VITE_PUBLIC_URL%/#faq",
+          "mainEntity": [
+            { "@type": "Question", "name": "Precisa instalar alguma coisa para jogar Graffiti de Madrugada?", "acceptedAnswer": { "@type": "Answer", "text": "Não. O jogo roda direto no navegador, no computador ou no celular, sem download, sem cadastro e sem custo." } },
+            { "@type": "Question", "name": "Quantas pessoas podem jogar juntas?", "acceptedAnswer": { "@type": "Answer", "text": "De 2 a 12 jogadores por sala. Dá para jogar todos contra todos ou em 2, 3 ou 4 equipes balanceadas." } },
+            { "@type": "Question", "name": "Como convido amigos para a minha sala?", "acceptedAnswer": { "@type": "Answer", "text": "Crie uma sala, copie o link no lobby e envie. Salas trancadas só aceitam quem tiver o link; salas abertas aparecem na lista da página inicial." } },
+            { "@type": "Question", "name": "Como se ganha?", "acceptedAnswer": { "@type": "Answer", "text": "Pichar paredes dá pontos, e pichar mais alto vale mais. Derrubar rivais também pontua. Quando os 3 minutos acabam, vence quem (ou a equipe que) tiver mais pontos." } },
+            { "@type": "Question", "name": "Quais são os controles?", "acceptedAnswer": { "@type": "Answer", "text": "WASD para andar, Shift para correr, mouse para olhar, Espaço para pular e escalar paredes, clique para pichar ou atirar, 1 e 2 para trocar entre spray e arma, F para soco e Q para o poder da classe. No celular há joystick e botões na tela." } }
+          ]
+        }
+      ]
     }
     </script>
   </head>
@@ -92,8 +135,8 @@
       <div id="feed"></div>
       <div id="home" class="hidden">
         <div class="homeCard">
-          <h2><img src="/favicon.svg" alt="" width="34" height="34" /> Graffiti de Madrugada</h2>
-          <p class="lead">Multiplayer 3D no navegador. Piche paredes, escale prédios, derrube rivais — de 2 a 12 por sala.</p>
+          <h1><img src="/favicon.svg" alt="" width="34" height="34" /> Graffiti de Madrugada</h1>
+          <p class="lead">Jogo multiplayer 3D grátis, direto no navegador. Piche paredes, escale prédios, derrube rivais: de 2 a 12 jogadores por sala, todos contra todos ou em equipes. Sem instalar nada.</p>
           <label class="field">Seu nome <input id="homeName" maxlength="12" placeholder="Crew…" /></label>
           <div class="homeGrid">
             <section>
@@ -116,6 +159,20 @@
             </section>
           </div>
           <p class="hint">Sala trancada não aparece na lista: só entra quem tiver o link.</p>
+          <section class="about" aria-label="Sobre o jogo">
+            <h2>Como jogar</h2>
+            <ol>
+              <li>Escolha um nome, entre numa sala aberta ou crie a sua e mande o link para a crew.</li>
+              <li>Quando todos clicarem em Pronto, a noite começa: 3 minutos para pichar o máximo de muro. Quanto mais alto, mais pontos.</li>
+              <li>Escale prédios para pegar colete, kit, tênis turbo e a bazuca de tinta. Derrube rivais com pistola, soco e o poder da sua classe.</li>
+            </ol>
+            <h2>Perguntas frequentes</h2>
+            <details><summary>Precisa instalar alguma coisa?</summary><p>Não. Roda no navegador, no computador ou no celular, sem download, sem cadastro e sem custo.</p></details>
+            <details><summary>Quantas pessoas podem jogar juntas?</summary><p>De 2 a 12 por sala, todos contra todos ou em 2, 3 ou 4 equipes balanceadas.</p></details>
+            <details><summary>Como convido amigos?</summary><p>Crie uma sala, copie o link no lobby e envie. Salas trancadas só aceitam quem tiver o link.</p></details>
+            <details><summary>Quais são os controles?</summary><p>WASD anda, Shift corre, mouse olha, Espaço pula e escala paredes, clique picha ou atira, 1 e 2 trocam entre spray e arma, F dá soco e Q usa o poder. No celular há joystick e botões na tela.</p></details>
+            <p class="credits">Feito por <a href="https://samuelramos.dev" rel="author">Samuel Ramos</a>. Código aberto no <a href="https://github.com/samuelrms/graffiti-de-madrugada" rel="noopener">GitHub</a>.</p>
+          </section>
         </div>
       </div>
       <div id="overlay">

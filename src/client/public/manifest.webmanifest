@@ -7,5 +7,8 @@
   "orientation": "landscape",
   "background_color": "#07060d",
   "theme_color": "#07060d",
-  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+  "lang": "pt-BR",
+  "categories": ["games", "entertainment"],
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }],
+  "screenshots": [{ "src": "/og.jpg", "sizes": "1280x720", "type": "image/jpeg", "form_factor": "wide", "label": "Cidade noturna vista da rua" }]
 }

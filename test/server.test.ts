@@ -520,3 +520,24 @@ test('SEO: robots.txt and sitemap point to the public URL; canonical redirect is
   t.after(() => off.close());
   assert.equal((await getAs(off.port, '/api/rooms', 'graffiti.onrender.com')).status, 200);
 });
+
+test('SEO: llms.txt, AI crawlers allowed, compression and cache headers', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gdm-'));
+  fs.mkdirSync(path.join(dir, 'assets'));
+  fs.writeFileSync(path.join(dir, 'index.html'), `<html>${'x'.repeat(2000)}</html>`);
+  fs.writeFileSync(path.join(dir, 'assets', 'app-abc123.js'), 'console.log(1)');
+  const { game } = await setup(t, { staticDir: dir, publicUrl: 'https://jogo.exemplo.dev' });
+  const base = `http://localhost:${game.port}`;
+  const llms = await (await fetch(`${base}/llms.txt`)).text();
+  assert.match(llms, /^# Graffiti de Madrugada/);
+  assert.match(llms, /https:\/\/jogo\.exemplo\.dev\/api\/rooms/);
+  const robots = await (await fetch(`${base}/robots.txt`)).text();
+  for (const bot of ['GPTBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended']) assert.match(robots, new RegExp(`User-agent: ${bot}\\nAllow: /`));
+  const html = await fetch(`${base}/`, { headers: { 'accept-encoding': 'gzip' } });
+  assert.equal(html.headers.get('content-encoding'), 'gzip');
+  assert.equal(html.headers.get('cache-control'), 'no-cache');
+  assert.equal(html.headers.get('x-powered-by'), null);
+  const asset = await fetch(`${base}/assets/app-abc123.js`);
+  assert.match(asset.headers.get('cache-control') ?? '', /immutable/);
+  assert.equal((await fetch(`${base}/.well-known/security.txt`)).status, 200);
+});

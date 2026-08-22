@@ -1,6 +1,7 @@
 // HTTP + Socket.IO server and the room registry. Each room is an isolated match.
 import { randomBytes } from 'node:crypto';
 import type { AddressInfo } from 'node:net';
+import compression from 'compression';
 import express from 'express';
 import { Server } from 'socket.io';
 import type { JoinError, RoomInfo } from '../../shared/protocol.ts';
@@ -20,6 +21,29 @@ export interface Game {
   createRoom(name: string, locked?: boolean): Room;
   close(): Promise<void>;
 }
+
+const LLMS_TXT = `# Graffiti de Madrugada
+
+> Jogo multiplayer 3D gratuito que roda no navegador (WebGL), em português do Brasil. De 2 a 12 jogadores por sala disputam uma cidade aberta durante uma noite de 3 minutos: pichar paredes dá pontos (quanto mais alto, mais vale), escalar prédios libera equipamentos, e armas de tinta, socos e poderes derrubam rivais. Modos: todos contra todos ou 2 a 4 equipes balanceadas.
+
+- Jogar: {URL}/
+- Código-fonte (TypeScript, Node, Socket.IO, Three.js): https://github.com/samuelrms/graffiti-de-madrugada
+- Autor: Samuel Ramos, https://samuelramos.dev
+
+## Como funciona
+
+- Sem instalação, sem cadastro, sem custo. Funciona em desktop e celular.
+- Salas com ID de 6 caracteres; salas abertas aparecem na página inicial, salas trancadas só pelo link.
+- Uma pessoa por navegador; o dono da sala escolhe o modo e pode fechá-la.
+- Controles: WASD anda, Shift corre, mouse olha, Espaço pula e escala paredes, clique picha ou atira, 1 e 2 trocam spray e arma, F soco, Q poder da classe.
+- Classes (poder Q): Corredor (disparada), Tanque (escudo), Saltador (super pulo), Fantasma (fumaça).
+- Equipamentos pela cidade: colete, kit médico, tênis turbo, lata 2x, bazuca de tinta no topo das torres.
+
+## API pública
+
+- GET {URL}/api/rooms lista salas abertas; POST cria uma sala (name, locked).
+- GET {URL}/health estado do servidor.
+`;
 
 export function newRoomId(len = 6): string {
   const bytes = randomBytes(len);
@@ -42,6 +66,8 @@ export function createGame(opts: Partial<GameOptions> = {}): Game {
 
   const app = express();
   app.set('trust proxy', true); // Render / Cloudflare tunnel put the client IP in X-Forwarded-For
+  app.disable('x-powered-by');
+  app.use(compression()); // gzip/brotli: the three.js bundle goes from ~800 KB to ~215 KB
   app.use(express.json({ limit: '4kb' }));
 
   // SEO: one canonical host. Page requests on another host (e.g. *.onrender.com) are redirected.
@@ -53,7 +79,21 @@ export function createGame(opts: Partial<GameOptions> = {}): Game {
     }
     next();
   });
-  app.get('/robots.txt', (_req, res) => { res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${cfg.publicUrl}/sitemap.xml\n`); });
+  // Search engines and AI crawlers are all welcome; only the JSON API is pointless to index.
+  const AI_BOTS = ['GPTBot', 'ChatGPT-User', 'OAI-SearchBot', 'ClaudeBot', 'Claude-SearchBot', 'anthropic-ai', 'PerplexityBot', 'Google-Extended', 'Applebot-Extended', 'Bytespider', 'CCBot', 'Amazonbot', 'meta-externalagent', 'DuckAssistBot'];
+  app.get('/robots.txt', (_req, res) => {
+    const lines = ['User-agent: *', 'Allow: /', 'Disallow: /api/', ''];
+    for (const bot of AI_BOTS) lines.push(`User-agent: ${bot}`, 'Allow: /', '');
+    lines.push(`Sitemap: ${cfg.publicUrl}/sitemap.xml`);
+    res.type('text/plain').send(lines.join('\n') + '\n');
+  });
+  // llms.txt: a plain-language summary for LLM crawlers and assistants.
+  app.get('/llms.txt', (_req, res) => {
+    res.type('text/plain').send(LLMS_TXT.replaceAll('{URL}', cfg.publicUrl));
+  });
+  app.get('/.well-known/security.txt', (_req, res) => {
+    res.type('text/plain').send(`Contact: https://github.com/samuelrms/graffiti-de-madrugada/issues\nPreferred-Languages: pt-BR, en\nCanonical: ${cfg.publicUrl}/.well-known/security.txt\n`);
+  });
   app.get('/sitemap.xml', (_req, res) => {
     res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${cfg.publicUrl}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url></urlset>\n`);
   });
@@ -73,7 +113,16 @@ export function createGame(opts: Partial<GameOptions> = {}): Game {
     const locked = !!req.body?.locked;
     res.status(201).json(makeRoom(name, locked).info());
   });
-  if (cfg.staticDir) app.use(express.static(cfg.staticDir));
+  if (cfg.staticDir) {
+    // Hashed assets are immutable; the HTML must always be revalidated so new builds show up.
+    app.use('/assets', express.static(`${cfg.staticDir}/assets`, { immutable: true, maxAge: '1y' }));
+    app.use(express.static(cfg.staticDir, {
+      setHeaders(res, filePath) {
+        if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+        else res.setHeader('Cache-Control', 'public, max-age=86400');
+      }
+    }));
+  }
 
   let resolveReady!: () => void;
   const ready = new Promise<void>((r) => { resolveReady = r; });
