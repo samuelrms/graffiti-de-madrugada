@@ -117,6 +117,15 @@ cabelo próprios. Corpo articulado (quadril, joelho, ombro, cotovelo) com
 animação de corrida, sprint, escalada, pulo, pintura e respiração parada.
 Cel-shading de 3 tons com contorno. Nada é baixado: tudo é gerado em código.
 
+### Identidade visual
+
+Mesma paleta do [samuelramos.dev](https://samuelramos.dev): superfícies em
+carvão e terra escura, terracota só para ação e traço, papel para texto, sálvia
+para "ok", ocre para atenção. Sem azul, verde ou cinza frio na interface;
+profundidade vem de superfície + borda de 1px, nunca de brilho. Fontes Fraunces
+(títulos), Instrument Sans (texto) e JetBrains Mono (IDs). As equipes seguem a
+paleta: Terra, Ocre, Sálvia e Papel.
+
 ### Idiomas e som
 
 Interface em **português (Brasil)** e **inglês**: detecta o idioma do navegador e

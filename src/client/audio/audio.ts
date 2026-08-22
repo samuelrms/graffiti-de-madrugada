@@ -5,7 +5,7 @@ import { onSettings, settings } from '../core/settings.ts';
 export type Sfx =
   | 'step' | 'land' | 'jump' | 'climb' | 'pistol' | 'bazooka' | 'explosion' | 'punch' | 'hurt' | 'hit_wall'
   | 'paint_tile' | 'pickup' | 'power' | 'shield' | 'ui_click' | 'ui_hover' | 'ui_ready' | 'ui_error'
-  | 'countdown' | 'match_start' | 'kill' | 'death' | 'victory' | 'defeat';
+  | 'countdown' | 'match_start' | 'kill' | 'death' | 'victory' | 'defeat' | 'boom';
 
 /** Files per sound; several variants are picked at random. */
 const FILES: Record<Sfx, string[]> = {
@@ -15,10 +15,10 @@ const FILES: Record<Sfx, string[]> = {
   punch: ['punch'], hurt: ['hurt'], hit_wall: ['hit_wall'], paint_tile: ['paint_tile'],
   pickup: ['pickup'], power: ['power'], shield: ['shield'],
   ui_click: ['ui_click'], ui_hover: ['ui_hover'], ui_ready: ['ui_ready'], ui_error: ['ui_error'],
-  countdown: ['countdown'], match_start: ['match_start'], kill: ['kill'], death: ['death'], victory: ['victory'], defeat: ['defeat']
+  countdown: ['countdown'], match_start: ['match_start'], kill: ['kill'], death: ['death'], victory: ['victory'], defeat: ['defeat'], boom: ['boom']
 };
 /** Jingles are "music"; everything else is an effect. */
-const MUSIC: Set<Sfx> = new Set(['match_start', 'kill', 'death', 'victory', 'defeat']);
+const MUSIC: Set<Sfx> = new Set(['match_start', 'kill', 'death', 'victory', 'defeat', 'boom']);
 
 let ctx: AudioContext | null = null;
 let master: GainNode, sfxBus: GainNode, musicBus: GainNode;

@@ -157,7 +157,7 @@ const city = C.generateCity();
       D.flags.freeCam = true;
       D.camera.position.set(cx, 3.0, cz + 4.2);
       D.camera.lookAt(new T.Vector3(cx, 0.9, cz - 2.2));
-    }, ['#ff2d75', '#00e5ff', '#b4ff39', '#ffb300', '#b967ff', '#ff6a00', '#2dff9b', '#ff4dff', '#4d7cff', '#ffe600', '#ff3b3b', '#7dffea']);
+    }, ['#c4552f', '#c9a227', '#7d9270', '#f4efe8', '#e0736c', '#d98e4a', '#a5476b', '#9b8bb4', '#5f9ea0', '#e3b23c', '#9e3f1f', '#bfa27a']);
     await B.sleep(300);
     await shot(a, 'personagens');
     console.log('personagens.jpg');

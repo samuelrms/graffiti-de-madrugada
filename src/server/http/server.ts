@@ -27,7 +27,7 @@ const LLMS_TXT = `# Graffiti de Madrugada
 > Jogo multiplayer 3D gratuito que roda no navegador (WebGL), em português do Brasil. De 2 a 12 jogadores por sala disputam uma cidade aberta durante uma noite de 3 minutos: pichar paredes dá pontos (quanto mais alto, mais vale), escalar prédios libera equipamentos, e armas de tinta, socos e poderes derrubam rivais. Modos: todos contra todos ou 2 a 4 equipes balanceadas.
 
 - Jogar: {URL}/
-- Código-fonte (TypeScript, Node, Socket.IO, Three.js): https://github.com/samuelrms/graffiti-de-madrugada
+- Tecnologia: TypeScript, Node, Socket.IO, Three.js
 - Autor: Samuel Ramos, https://samuelramos.dev
 
 ## Como funciona
@@ -92,7 +92,7 @@ export function createGame(opts: Partial<GameOptions> = {}): Game {
     res.type('text/plain').send(LLMS_TXT.replaceAll('{URL}', cfg.publicUrl));
   });
   app.get('/.well-known/security.txt', (_req, res) => {
-    res.type('text/plain').send(`Contact: https://github.com/samuelrms/graffiti-de-madrugada/issues\nPreferred-Languages: pt-BR, en\nCanonical: ${cfg.publicUrl}/.well-known/security.txt\n`);
+    res.type('text/plain').send(`Contact: https://samuelramos.dev\nPreferred-Languages: pt-BR, en\nCanonical: ${cfg.publicUrl}/.well-known/security.txt\n`);
   });
   app.get('/sitemap.xml', (_req, res) => {
     res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${cfg.publicUrl}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url></urlset>\n`);

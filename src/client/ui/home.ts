@@ -76,7 +76,7 @@ export function renderHomeLabels(): void {
   $('#createBtn').innerHTML = `${I.plus(16)} ${t('home.create')}`;
   $('#joinBtn').innerHTML = `${I.login(16)} ${t('home.join')}`;
   $('#lockLabel').innerHTML = `${I.lock(16)} ${t('home.locked')}`;
-  $('#credits').innerHTML = t('home.credits', { author: '<a href="https://samuelramos.dev" rel="author">Samuel Ramos</a>', github: '<a href="https://github.com/samuelrms/graffiti-de-madrugada" rel="noopener">GitHub</a>' });
+  $('#credits').innerHTML = t('home.credits', { author: '<a href="https://samuelramos.dev" rel="author">Samuel Ramos</a>' });
   if (room.info) renderRoomBadge(room.info);
 }
 

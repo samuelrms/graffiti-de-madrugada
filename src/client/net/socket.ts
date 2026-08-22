@@ -43,7 +43,7 @@ socket.on('shot', (d) => {
   tracer(from, to, p?.color ?? '#fff');
   const mine = d.by === net.me;
   audio.play(d.weapon === 'bazooka' ? 'bazooka' : 'pistol', mine ? { volume: 0.7 } : { volume: 0.7, at: from });
-  if (d.weapon === 'bazooka') { burst(to, '#ff6a00', 1.5); audio.play('explosion', { volume: 0.9, at: to }); }
+  if (d.weapon === 'bazooka') { burst(to, '#d98e4a', 1.5); audio.play('explosion', { volume: 0.9, at: to }); }
   else if (d.hit) burst(to, p?.color ?? '#fff', 0.3);
   else audio.play('hit_wall', { volume: 0.3, at: to });
 });
@@ -54,8 +54,8 @@ socket.on('hit', (d) => {
 });
 socket.on('damaged', (d) => { if (d.id === net.me) { flashDamage(); audio.play('hurt', { volume: 0.6 }); } });
 socket.on('killed', (d) => {
-  if (d.id === net.me) { toast(`${I.skull(26)} ${t('toast.killedBy', { name: d.byName ?? t('toast.night'), loss: d.loss })}`, '#ff3b3b'); audio.play('death', { volume: 0.8 }); audio.stopAllSprays(); }
-  else if (d.by === net.me) { toast(`${I.flame(26)} ${t('toast.youKilled', { name: d.name })}`, '#b4ff39'); audio.play('kill', { volume: 0.8 }); }
+  if (d.id === net.me) { toast(`${I.skull(26)} ${t('toast.killedBy', { name: d.byName ?? t('toast.night'), loss: d.loss })}`, '#e0736c'); audio.play('death', { volume: 0.9, rate: 0.85 }); audio.play('boom', { volume: 0.5 }); audio.stopAllSprays(); }
+  else if (d.by === net.me) { toast(`${I.flame(26)} ${t('toast.youKilled', { name: d.name })}`, '#d98e4a'); audio.play('kill', { volume: 0.8 }); }
   killFeed(d);
 });
 socket.on('pickup', (d) => {
@@ -83,7 +83,8 @@ socket.on('state', (s) => {
     if (s.phase === 'ended') {
       const me = s.players.find((p) => p.id === net.me);
       const won = s.winner && (s.winner.team !== undefined ? s.winner.team === me?.team : s.winner.name === me?.name);
-      audio.play(won ? 'victory' : 'defeat', { volume: 0.8 });
+      if (won) audio.play('victory', { volume: 0.9 });
+      else { audio.play('defeat', { volume: 1, rate: 0.75 }); audio.play('boom', { volume: 0.9, rate: 0.8 }); }
       audio.stopAllSprays();
     }
     lastPhase = s.phase;
