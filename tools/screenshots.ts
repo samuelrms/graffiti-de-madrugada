@@ -168,6 +168,14 @@ const city = C.generateCity();
       document.querySelector('#noui')?.remove();
     });
 
+    // Pause menu (settings pane).
+    await a.keyboard.press('Escape');
+    await a.waitForSelector('#pause:not(.hidden)');
+    await B.sleep(300);
+    await shot(a, 'pausa');
+    console.log('pausa.jpg');
+    await a.keyboard.press('Escape');
+
     // Touch layout: emulate a phone.
     const m = await (await browser.createBrowserContext()).newPage();
     await m.emulate({ viewport: { width: 844, height: 390, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148' });

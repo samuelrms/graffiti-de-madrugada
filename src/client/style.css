@@ -138,3 +138,24 @@ body.menu #board, body.menu #bottomleft, body.menu #bottomright, body.menu #hint
 .about details p { margin: 4px 0 8px 16px; }
 .about a { color: #7dffea; }
 .credits { margin: 10px 0 0; font-size: 12px; color: #64748b; }
+
+/* ---------- Pause menu ---------- */
+#pause { position: absolute; inset: 0; z-index: 5; display: grid; place-items: safe center; background: rgba(4, 3, 12, 0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); pointer-events: auto; overflow: auto; padding: 16px 0; }
+#pause.hidden { display: none; }
+.pauseCard { width: min(94vw, 560px); padding: 22px 26px; border-radius: 16px; background: rgba(12, 10, 24, 0.95); border: 1px solid #2a2233; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+.pauseCard h2 { margin: 0 0 4px; font-size: 26px; }
+#pauseTabs { display: flex; gap: 6px; margin: 12px 0; }
+#pauseTabs button { margin: 0; padding: 6px 14px; font-size: 13px; background: rgba(255,255,255,0.08); color: #cbd5e1; box-shadow: none; border: 1px solid #334155; }
+#pauseTabs button.on { background: #ff2d75; color: #fff; border-color: #ff2d75; }
+.pausePane label { display: grid; grid-template-columns: 1fr 1.2fr; align-items: center; gap: 10px; margin: 8px 0; font-size: 14px; color: #e2e8f0; }
+.pausePane label.check { grid-template-columns: auto 1fr; }
+.pausePane select { padding: 6px 10px; border-radius: 8px; border: 1px solid #334155; background: #0b0a14; color: #fff; }
+.pausePane input[type=range] { width: 100%; accent-color: #ff2d75; }
+#ctlTable { width: 100%; border-collapse: collapse; font-size: 13px; }
+#ctlTable th { text-align: left; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; padding: 4px 6px; }
+#ctlTable td { padding: 5px 6px; border-top: 1px solid #1f1a2e; }
+.pauseActions { display: flex; gap: 10px; justify-content: center; margin: 16px 0 0; }
+.pauseActions button { margin: 0; }
+body.paused #cross, body.paused #hint { display: none !important; }
+#audioHint { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); font-size: 13px; color: #cbd5e1; background: rgba(10,8,20,0.8); padding: 6px 12px; border-radius: 8px; z-index: 6; }
+#audioHint.hidden { display: none; }

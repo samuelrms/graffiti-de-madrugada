@@ -20,6 +20,7 @@ vence quem tiver mais pontos.
 | ![Pichando](docs/img/pichando.jpg) Spray na parede — tiles valem mais quanto mais alto | ![Escalando](docs/img/escalando.jpg) Segurar Espaço na parede = escalar |
 | ![Telhado](docs/img/telhado.jpg) Bazuca de tinta espera no topo das torres | ![Combate](docs/img/combate.jpg) Pistola, bazuca, soco e poderes |
 | ![Kill feed](docs/img/kill.jpg) Kill feed com nomes e ranking ao vivo | ![Controles de toque](docs/img/toque.jpg) Celular: joystick, arrastar para olhar, botões |
+| ![Pausa](docs/img/pausa.jpg) Esc: idioma, volumes, sensibilidade, controles | |
 
 Prints gerados automaticamente por `pnpm screenshots` (Chrome headless jogando de verdade).
 
@@ -95,6 +96,12 @@ pnpm start      # roda o build
 | `1` / `2` / roda do mouse | Alternar spray ↔ arma |
 | `F` | Soco: 25 de dano + atordoa 0,9 s quem estiver na frente |
 | `Q` | Poder da sua classe (ver abaixo) |
+| `Esc` | Menu: continuar, configurações (idioma, volumes, sensibilidade, inverter eixo), controles, sair da sala |
+
+**Controle (gamepad)** — Xbox, PlayStation e Steam Deck (mapeamento padrão):
+analógico esquerdo anda, direito olha, `A`/Cross pula e escala, `RT` picha ou
+atira, `B`/Círculo troca spray e arma, `X`/Quadrado soco, `Y`/Triângulo poder,
+`LB` ou `L3` corre, `Start` abre o menu.
 
 No celular/tablet: joystick virtual na metade esquerda (empurrar até a borda =
 correr), arrastar na metade direita para olhar, e botões usar, pular/escalar,
@@ -109,6 +116,20 @@ cavalo, capacete, fone, bandana, robô…), cada um com rosto, tênis, jaqueta e
 cabelo próprios. Corpo articulado (quadril, joelho, ombro, cotovelo) com
 animação de corrida, sprint, escalada, pulo, pintura e respiração parada.
 Cel-shading de 3 tons com contorno. Nada é baixado: tudo é gerado em código.
+
+### Idiomas e som
+
+Interface em **português (Brasil)** e **inglês**: detecta o idioma do navegador e
+dá para trocar no menu (`Esc`). Efeitos sonoros posicionais (passos, pulo,
+escalada, tiros, explosões, socos, spray, pickups, poderes), jingles de início,
+kill, morte, vitória e derrota, ambiente urbano e ticks da contagem. Volumes
+separados para geral, efeitos e música. O som liga no primeiro clique ou tecla
+(exigência dos navegadores).
+
+Todos os samples vêm da [Kenney](https://kenney.nl) (Impact Sounds, Sci-Fi
+Sounds, Interface Sounds, RPG Audio, Music Jingles), licença **CC0 1.0**; ver
+`src/client/public/audio/CREDITS.txt`. O chiado do spray é sintetizado em tempo
+real com a Web Audio API.
 
 ### Classes e poderes
 
@@ -220,6 +241,10 @@ src/
     main.ts          loop de simulação (timer) e de render (rAF)
     style.css        HUD, home, lobby, toque
     core/state.ts    estado mutável compartilhado entre módulos do cliente
+    core/settings.ts idioma, volumes, sensibilidade (localStorage)
+    core/i18n.ts     dicionários pt-BR/en, t() e data-i18n
+    audio/audio.ts   Web Audio: samples CC0, spray sintetizado, som posicional, ambiente
+    game/gamepad.ts  Gamepad API (Xbox/PlayStation/Steam Deck)
     net/socket.ts    cliente Socket.IO tipado + handlers dos eventos
     game/physics.ts  física local, câmera, mira
     game/input.ts    teclado, mouse (pointer lock), toque
@@ -228,7 +253,8 @@ src/
     ui/hud.ts        placar, vida, armas, lobby, fim de partida, kill feed
     ui/home.ts       home: lista/cria/entra em salas, deep link #r=ID
     ui/icons.ts      ícones lucide → SVG inline
-    public/          favicon, manifest, imagem Open Graph
+    ui/pause.ts      menu de pausa: configurações e tabela de controles
+    public/          favicon, manifest, imagem Open Graph, audio/ (CC0 + créditos)
 test/                node:test — unitário (cidade), integração (socket.io-client), e2e (Chrome)
 tools/               harness puppeteer-core: prints do README e apoio ao e2e
 .github/workflows    CI/CD: typecheck, lint, testes, e2e, stack Docker, deploy, release
@@ -260,7 +286,7 @@ render.yaml          blueprint Render: web service Docker free, health check /he
 | Tipos + lint | `pnpm typecheck` · `pnpm lint` | `tsc --noEmit` nos três alvos; ESLint com typescript-eslint |
 | Unitário | `pnpm test` | `shared/city.ts`: determinismo, prédios sem sobreposição e dentro do mapa, spawns fora de prédios, tiles/chaves, valor por altura |
 | Integração | `pnpm test` | servidor via socket.io-client: salas (criar, listar só públicas, entrar por ID/nome, trancada só por ID, isolamento, destruição ao esvaziar, IDs sem caracteres ambíguos), um por navegador e por IP, dono (passagem, modo, fechar), equipes (balanceamento, cores, sem fogo amigo, vencedor por equipe), lobby/ready, 13º rejeitado, pintura (alcance, cooldown, roubo), tiros/kill/respawn, bloqueio por prédio, soco, colete/kit, bazuca, escudo, fim/restart, clamp e validação de movimento |
-| E2E | `pnpm test:e2e` | dois Chromes headless: home → cria sala trancada (não listada) → entra pelo link → segunda aba recusada → dono troca para equipes e volta → andar (sem correções do servidor) → pichar pela mira → escalar → matar → kill feed → respawn → dono sai e passa a sala → último sai e a sala some |
+| E2E | `pnpm test:e2e` | dois Chromes headless: home → cria sala trancada (não listada) → entra pelo link → segunda aba recusada → dono troca para equipes e volta → andar (sem correções do servidor) → pichar pela mira → menu de pausa e troca de idioma → escalar → matar → kill feed → respawn → dono sai e passa a sala → último sai e a sala some |
 
 GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) em todo
 push/PR na `main`: typecheck + lint + testes → e2e → `docker compose up --build`,
@@ -318,5 +344,5 @@ no Bing Webmaster Tools, e validar o preview do link no LinkedIn Post Inspector.
 
 ## Fora do escopo
 
-Login, ranking persistente, áudio, física completa no servidor (o servidor valida
+Login, ranking persistente, física completa no servidor (o servidor valida
 plausibilidade, não simula), persistência de salas entre reinícios.

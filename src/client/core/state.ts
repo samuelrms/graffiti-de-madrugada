@@ -38,6 +38,10 @@ export const input = {
   keys: new Set<string>(),
   mouseDown: false,
   touch: { active: false, x: 0, y: 0 },
+  /** gamepad left stick, same convention as touch */
+  pad: { active: false, x: 0, y: 0 },
+  /** sprint held by a gamepad button */
+  padSprint: false,
   /** set by the dash power; ms timestamp (performance.now) */
   dashUntil: 0,
   superJump: false

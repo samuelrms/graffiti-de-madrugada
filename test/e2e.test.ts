@@ -80,6 +80,19 @@ test('two browsers play a round: lobby → paint → climb → kill', { skip: !c
     assert.equal(other.score, 0);
     assert.ok(await b.evaluate(() => window.DBG.state().players.some((p: any) => p.tiles > 0)), 'other client sees the score');
 
+    // Pause menu: Esc opens it, language switch re-renders the UI, Esc closes it.
+    await a.keyboard.press('Escape');
+    await a.waitForSelector('#pause:not(.hidden)', { timeout: 3000 });
+    await a.select('#setLang', 'en');
+    assert.equal(await a.evaluate(() => document.querySelector('#pauseResume')?.textContent), 'Resume');
+    assert.equal(await a.evaluate(() => document.documentElement.lang), 'en');
+    assert.match(await a.evaluate(() => document.querySelector('#tool')?.textContent ?? ''), /Paint pistol/);
+    await a.select('#setLang', 'pt-BR');
+    assert.equal(await a.evaluate(() => document.querySelector('#pauseResume')?.textContent), 'Continuar');
+    await a.keyboard.press('Escape');
+    await a.waitForSelector('#pause.hidden', { timeout: 3000 });
+    assert.ok(await a.evaluate(() => !!(window as any).AudioContext), 'Web Audio available');
+
     // Climbing: hold W + Space against the wall.
     const climbed = await B.holdUntil(a, ['w', ' '], () => window.DBG.player.y > 5, 10000);
     assert.ok(climbed, 'gained height on the wall');

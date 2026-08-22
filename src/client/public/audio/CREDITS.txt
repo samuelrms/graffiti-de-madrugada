@@ -1,0 +1,6 @@
+All sound effects in this folder come from Kenney (https://kenney.nl), released under
+Creative Commons Zero (CC0 1.0): https://creativecommons.org/publicdomain/zero/1.0/
+
+Packs used: Impact Sounds, Sci-Fi Sounds, Interface Sounds, RPG Audio, Music Jingles.
+Files were renamed to match their use in the game; no other changes.
+The spray-can hiss is synthesized at runtime with the Web Audio API.

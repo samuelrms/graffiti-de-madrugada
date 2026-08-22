@@ -1,11 +1,15 @@
 // Home screen: list public rooms, create a room (optionally locked), join by id or name.
 // Room links look like /#r=abc123 so a locked room can be shared by URL alone.
 import type { JoinError, RoomInfo } from '../../shared/protocol.ts';
+import { t } from '../core/i18n.ts';
+import { audio } from '../audio/audio.ts';
 import { esc } from './hud.ts';
 import { I } from './icons.ts';
 import { socket } from '../net/socket.ts';
 import { $, net } from '../core/state.ts';
 
+export const room = { info: null as RoomInfo | null };
+export const isOwner = () => !!room.info && room.info.ownerId === net.me;
 const NAME_KEY = 'gdm:name';
 const CLIENT_KEY = 'gdm:client';
 let pollTimer = 0;
@@ -34,7 +38,7 @@ export function joinRoom(key: string): void {
 
 export async function createRoom(name: string, locked: boolean): Promise<void> {
   const r = await fetch('/api/rooms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, locked }) });
-  if (!r.ok) { $('#homeError').textContent = 'Não deu pra criar a sala agora.'; return; }
+  if (!r.ok) { $('#homeError').textContent = t('home.createFail'); audio.play('ui_error'); return; }
   const info = (await r.json()) as RoomInfo;
   joinRoom(info.id);
 }
@@ -58,32 +62,32 @@ async function refreshRooms(): Promise<void> {
   try {
     const rooms = (await (await fetch('/api/rooms')).json()) as RoomInfo[];
     const list = $('#roomList');
-    if (!rooms.length) { list.innerHTML = '<li class="empty">Nenhuma sala aberta. Crie a primeira!</li>'; return; }
-    const PHASE: Record<string, string> = { lobby: 'no lobby', countdown: 'começando', playing: 'jogando', ended: 'ranking' };
+    if (!rooms.length) { list.innerHTML = `<li class="empty">${t('home.noRooms')}</li>`; return; }
+    const PHASE: Record<string, string> = { lobby: t('phase.lobby'), countdown: t('phase.countdown'), playing: t('phase.playing'), ended: t('phase.ended') };
     list.innerHTML = rooms.map((r) =>
       `<li><button data-join="${r.id}"><b>${esc(r.name)}</b><span>${I.users(14)} ${r.players}/${r.maxPlayers} · ${PHASE[r.phase] ?? r.phase}</span><code>${r.id}</code></button></li>`
     ).join('');
   } catch { /* server unreachable; keep the old list */ }
 }
 
-const JOIN_ERROR: Record<JoinError, string> = {
-  'not-found': 'Sala não encontrada. Confira o ID ou o nome (salas trancadas só entram pelo link).',
-  full: 'Sala cheia (12 pichadores).',
-  invalid: 'Digite o ID ou o nome da sala.',
-  duplicate: 'Você já está jogando em outra aba deste navegador. Feche a outra aba para entrar.',
-  'ip-limit': 'Já existe um jogador conectado a partir desta rede/IP.'
-};
+const joinError = (r: JoinError): string => t((`join.${r}`) as never) || t('join.generic');
+
+export function renderHomeLabels(): void {
+  $('#createBtn').innerHTML = `${I.plus(16)} ${t('home.create')}`;
+  $('#joinBtn').innerHTML = `${I.login(16)} ${t('home.join')}`;
+  $('#lockLabel').innerHTML = `${I.lock(16)} ${t('home.locked')}`;
+  $('#credits').innerHTML = t('home.credits', { author: '<a href="https://samuelramos.dev" rel="author">Samuel Ramos</a>', github: '<a href="https://github.com/samuelrms/graffiti-de-madrugada" rel="noopener">GitHub</a>' });
+  if (room.info) renderRoomBadge(room.info);
+}
 
 export function setupHome(): void {
   const nameInput = $<HTMLInputElement>('#homeName');
   nameInput.value = localStorage.getItem(NAME_KEY) ?? '';
-  $('#createBtn').innerHTML = `${I.plus(16)} Criar sala`;
-  $('#joinBtn').innerHTML = `${I.login(16)} Entrar`;
-  $('#lockLabel').innerHTML = `${I.lock(16)} Trancada (só pelo link)`;
+  renderHomeLabels();
 
   $('#createForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    const name = $<HTMLInputElement>('#roomName').value.trim() || `Sala de ${playerName() || 'alguém'}`;
+    const name = $<HTMLInputElement>('#roomName').value.trim() || t('home.roomOf', { name: playerName() || t('home.someone') });
     void createRoom(name, $<HTMLInputElement>('#roomLocked').checked);
   });
   $('#joinForm').addEventListener('submit', (e) => {
@@ -99,13 +103,14 @@ export function setupHome(): void {
   $('#copyLink').addEventListener('click', async () => {
     if (!net.cfg) return;
     await navigator.clipboard?.writeText(roomLink(net.cfg.room.id));
-    $('#copyLink').innerHTML = `${I.check(14)} copiado`;
-    setTimeout(() => { $('#copyLink').innerHTML = `${I.link(14)} copiar link`; }, 1500);
+    $('#copyLink').innerHTML = `${I.check(14)} ${t('room.copied')}`;
+    setTimeout(() => { $('#copyLink').innerHTML = `${I.link(14)} ${t('room.copyLink')}`; }, 1500);
   });
 
   socket.on('joinError', (e) => {
     showHome();
-    $('#homeError').textContent = JOIN_ERROR[e.reason] ?? 'Não deu pra entrar.';
+    $('#homeError').textContent = joinError(e.reason);
+    audio.play('ui_error');
   });
   socket.on('welcome', (w) => {
     hideHome();
@@ -116,7 +121,7 @@ export function setupHome(): void {
   socket.on('roomClosed', () => {
     net.cfg = null;
     showHome();
-    $('#homeError').textContent = 'A sala foi fechada pelo dono.';
+    $('#homeError').textContent = t('home.closedByOwner');
   });
   $('#modeForm').addEventListener('change', () => {
     const mode = $<HTMLSelectElement>('#modeSelect').value as 'ffa' | 'teams';
@@ -135,16 +140,14 @@ export function setupHome(): void {
   if (socket.connected) onConnect();
 }
 
-export const room = { info: null as RoomInfo | null };
-export const isOwner = () => !!room.info && room.info.ownerId === net.me;
-
 function renderRoomBadge(r: RoomInfo): void {
   room.info = r;
-  const modeTxt = r.mode === 'teams' ? `${r.teams} equipes` : 'todos contra todos';
+  const modeTxt = r.mode === 'teams' ? t('room.teams', { n: r.teams }) : t('room.ffa');
   $('#roomBadge').innerHTML = `${r.locked ? I.lock(14) : I.users(14)} <b>${esc(r.name)}</b> <code>${r.id}</code> · ${modeTxt} <button id="copyLinkInline">${I.link(14)}</button>`;
   $('#copyLinkInline').addEventListener('click', () => $('#copyLink').click());
-  $('#copyLink').innerHTML = `${I.link(14)} copiar link`;
-  $('#lobbyRoom').innerHTML = `${r.locked ? I.lock(16) : I.users(16)} ${esc(r.name)} · <code>${r.id}</code>${r.locked ? ' · trancada' : ''} · ${modeTxt}`;
+  $('#copyLink').innerHTML = `${I.link(14)} ${t('room.copyLink')}`;
+  $('#lobbyRoom').innerHTML = `${r.locked ? I.lock(16) : I.users(16)} ${esc(r.name)} · <code>${r.id}</code>${r.locked ? ` · ${t('room.locked')}` : ''} · ${modeTxt}`;
+  for (const o of $<HTMLSelectElement>('#teamsSelect').options) o.textContent = t('room.teamsN', { n: o.value });
   const owner = isOwner();
   $('#ownerBox').style.display = owner ? '' : 'none';
   $('#closeRoom').style.display = owner ? '' : 'none';

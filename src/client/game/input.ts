@@ -1,15 +1,19 @@
 // Keyboard, mouse (pointer lock) and touch controls.
-import { I } from '../ui/icons.ts';
-import { setReady, updateHud, iAmReady } from '../ui/hud.ts';
-import { socket } from '../net/socket.ts';
-import { aimDirection, aimWallTile } from './physics.ts';
-import { renderer } from '../render/scene.ts';
+import { audio } from '../audio/audio.ts';
+import { settings } from '../core/settings.ts';
 import { $, input, isTouch, net, player, type Tool } from '../core/state.ts';
+import { socket } from '../net/socket.ts';
+import { renderer } from '../render/scene.ts';
+import { iAmReady, setReady, updateHud } from '../ui/hud.ts';
+import { I } from '../ui/icons.ts';
+import { isPaused, togglePause } from '../ui/pause.ts';
+import { setupGamepad } from './gamepad.ts';
+import { aimDirection, aimWallTile } from './physics.ts';
 
 const canvas = renderer.domElement;
 const keys = input.keys;
 
-export function setTool(t: Tool): void { player.tool = t; updateHud(); }
+export function setTool(t: Tool): void { if (player.tool !== t) audio.play('ui_hover', { volume: 0.5 }); player.tool = t; updateHud(); }
 
 export function shoot(): void {
   const d = aimDirection();
@@ -20,7 +24,9 @@ let lastPaintAt = 0;
 /** Called every frame: updates the crosshair and paints while the mouse is held. */
 export function tryPaint(now: number): void {
   const t = aimWallTile();
-  $('#cross').classList.toggle('can', !!t && t.dist <= 4.5);
+  const can = !!t && t.dist <= 4.5;
+  $('#cross').classList.toggle('can', can);
+  audio.spray(input.mouseDown && can, 'me');
   if (!input.mouseDown || !t || t.dist > 4.5 || now - lastPaintAt < 120) return;
   lastPaintAt = now;
   socket.emit('paint', t.key);
@@ -28,12 +34,19 @@ export function tryPaint(now: number): void {
 
 const canAct = () => net.state.phase === 'playing' && !player.dead && !player.stunned;
 
+// ---------- Audio unlock (browsers need a gesture) ----------
+const unlock = () => { audio.unlock(); $('#audioHint').classList.add('hidden'); };
+addEventListener('pointerdown', unlock, { passive: true });
+addEventListener('keydown', unlock);
+addEventListener('gamepadconnected', unlock);
+
 // ---------- Mouse ----------
-canvas.addEventListener('click', () => { if (!isTouch && document.pointerLockElement !== canvas) canvas.requestPointerLock(); });
+canvas.addEventListener('click', () => { if (!isTouch && !isPaused() && document.pointerLockElement !== canvas) canvas.requestPointerLock(); });
 addEventListener('mousemove', (e) => {
   if (document.pointerLockElement !== canvas) return;
-  player.yaw -= e.movementX * 0.0025;
-  player.pitch = Math.max(-0.6, Math.min(1.25, player.pitch + e.movementY * 0.0025));
+  const s = 0.0025 * settings.sensitivity;
+  player.yaw -= e.movementX * s;
+  player.pitch = Math.max(-0.6, Math.min(1.25, player.pitch + e.movementY * s * (settings.invertY ? -1 : 1)));
 });
 addEventListener('mousedown', (e) => {
   if (document.pointerLockElement !== canvas || e.button !== 0) return;
@@ -55,6 +68,17 @@ addEventListener('keydown', (e) => {
   if (k === 'f' && !e.repeat) socket.emit('melee');
   if (k === 'q' && !e.repeat) socket.emit('power');
 });
+
+// ---------- Gamepad ----------
+setupGamepad({
+  jump: (down) => { if (down) keys.add(' '); else keys.delete(' '); },
+  fire: (down) => { input.mouseDown = down; if (down && player.tool === 'gun' && canAct()) shoot(); },
+  melee: () => socket.emit('melee'),
+  power: () => socket.emit('power'),
+  swap: () => setTool(player.tool === 'spray' ? 'gun' : 'spray'),
+  menu: () => togglePause(),
+  sprint: (down) => { input.padSprint = down; }
+}, () => { audio.unlock(); });
 addEventListener('keyup', (e) => {
   const k = e.key.toLowerCase();
   keys.delete(k);
@@ -63,8 +87,9 @@ addEventListener('keyup', (e) => {
 addEventListener('blur', () => keys.clear());
 
 // ---------- Lobby / name ----------
-$('#restart').addEventListener('click', () => socket.emit('restart'));
+$('#restart').addEventListener('click', () => { audio.play('ui_click'); socket.emit('restart'); });
 $('#ready').addEventListener('click', () => {
+  audio.play('ui_ready', { volume: 0.7 });
   const next = !iAmReady;
   const name = $<HTMLInputElement>('#lobbyName').value.trim();
   if (name) socket.emit('rename', name);
