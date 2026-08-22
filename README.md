@@ -113,7 +113,7 @@ flowchart TD
     end
 
     subgraph CI["GitHub Actions (push na main)"]
-        T1[npm test] --> T2[e2e Chrome] --> T3["compose up + túnel + /health"] --> DEP["fly deploy (gru)"]
+        T1[npm test] --> T2[e2e Chrome] --> T3["compose up + túnel + /health"] --> DEP["deploy hook → Render"]
     end
     DEP -.->|mesma imagem Docker| Game
 
@@ -164,32 +164,27 @@ espera o `game` ficar healthy, bate em `/health`, espera o túnel imprimir a URL
 pública e confere que ela responde de fora. A URL fica no resumo do job. Em push
 na `main`, com tudo verde, o job `deploy` publica no Fly.io (ver abaixo).
 
-## Deploy (Fly.io)
+## Deploy (Render, plano free)
 
-Host escolhido: **Fly.io**, região `gru` (São Paulo). Por quê: roda o `Dockerfile`
-sem mudar nada, WebSocket nativo, uma máquina sempre ligada (`min_machines_running
-= 1`, `max = 1` — o estado da partida vive em memória, então nunca pode haver duas
-instâncias), sem dormir no free tier como Render/Railway, e deploy por CLI que
-cabe num job do GitHub Actions. O túnel do Cloudflare continua sendo o caminho do
-hackathon (`docker compose`); no Fly a URL é direta: <https://graffiti-de-madrugada.fly.dev>.
+Host: **Render** free web service (Docker). Custo zero, WebSocket nativo, roda o
+`Dockerfile` como está. Pegadinha do free: a instância dorme após ~15 min sem
+acesso e o primeiro acesso demora 30–50 s para acordar — aceitável para demo.
+Estado da partida vive em memória, então é sempre uma instância só. O túnel do
+Cloudflare continua sendo o caminho do hackathon (`docker compose`); no Render a
+URL é direta: <https://graffiti-de-madrugada.onrender.com>.
 
-Configuração única (uma vez, na sua máquina):
+Configuração única (no painel do Render, sem cartão):
 
-```bash
-brew install flyctl          # ou curl -L https://fly.io/install.sh | sh
-fly auth signup              # ou fly auth login
-fly apps create graffiti-de-madrugada
-fly deploy --ha=false        # primeiro deploy manual; os próximos são pelo CI
-fly tokens create deploy -x 999999h   # copie o token
-gh secret set FLY_API_TOKEN  # cole o token
-```
+1. **New → Blueprint**, conecte este repositório. O [`render.yaml`](render.yaml)
+   cria o serviço `graffiti-de-madrugada` (free, Oregon, health check `/health`,
+   auto-deploy desligado — quem publica é o CI depois dos testes).
+2. No serviço: **Settings → Deploy Hook → copiar URL**.
+3. No GitHub: `gh secret set RENDER_DEPLOY_HOOK` e cole a URL. Se o Render der
+   outro domínio ao serviço, `gh variable set RENDER_URL --body https://SEU.onrender.com`.
 
-Depois disso, todo push na `main` que passar em testes, e2e e stack Docker faz
-`fly deploy` automaticamente e confere `/health` na URL pública. Sem o secret o
-job de deploy é pulado com aviso no resumo do run.
-
-Parâmetros em [`fly.toml`](fly.toml): `shared-cpu-1x`, 512 MB, health check em
-`/health` a cada 15 s, HTTPS forçado, limite de 250 conexões.
+Depois disso, todo push na `main` que passar em testes, e2e e stack Docker chama o
+deploy hook e espera `/health` responder na URL pública. Sem o secret o job é
+pulado com aviso no resumo do run.
 
 ## Estrutura
 
@@ -200,8 +195,8 @@ public/index.html  HUD, lobby, overlays
 public/game.js     Three.js: cidade, personagens, câmera, física, escalada, efeitos
 test/              node:test — unitário (cidade), integração (socket.io-client) e e2e (Chrome)
 tools/             harness puppeteer-core: gera os prints do README e apoia o e2e
-.github/workflows  CI/CD: testes, e2e, stack Docker com túnel e deploy no Fly.io
-fly.toml           app Fly.io: 1 máquina em São Paulo, health check, HTTPS
+.github/workflows  CI/CD: testes, e2e, stack Docker com túnel e deploy no Render
+render.yaml        blueprint Render: web service Docker free, health check /health
 Dockerfile         node:22-alpine
 compose.yaml       game + tunnel (Cloudflare Quick Tunnel)
 tunnel/            imagem do cloudflared que imprime a URL pública

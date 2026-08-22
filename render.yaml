@@ -1,0 +1,15 @@
+# Render Blueprint: one free Docker web service. Free instances sleep after
+# ~15 min idle and wake on the first request (~30-50 s). Game state is in
+# memory, so keep a single instance.
+services:
+  - type: web
+    name: graffiti-de-madrugada
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: false   # deploys are triggered by CI (deploy hook) after tests pass
+    envVars:
+      - key: NODE_ENV
+        value: production
