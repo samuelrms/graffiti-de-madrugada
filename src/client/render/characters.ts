@@ -14,15 +14,15 @@ export const LOOKS: Look[] = [
   { hat: 'cap', scale: 1, width: 1, skin: 0xc68642, hair: 0x2b1a10, back: false, mouth: 'grin', jacket: 'open', pants: 0x1f2230, shoes: 0xf1f1f1 },
   { hat: 'beanie', scale: 1.15, width: 0.82, skin: 0xffdbac, hair: 0x5a3a1e, back: false, mouth: 'smile', jacket: 'hoodie', pants: 0x2a2a3a, shoes: 0x222222 },
   { hat: 'none', scale: 0.86, width: 1.3, skin: 0x8d5524, hair: 0x120a06, back: true, mouth: 'flat', jacket: 'vest', pants: 0x3a3128, shoes: 0xffffff },
-  { hat: 'mohawk', scale: 1, width: 1, skin: 0xf1c27d, hair: 0x111111, back: false, mouth: 'grin', jacket: 'tee', pants: 0x101018, shoes: 0xff3b3b },
+  { hat: 'mohawk', scale: 1, width: 1, skin: 0xf1c27d, hair: 0x111111, back: false, mouth: 'grin', jacket: 'tee', pants: 0x101018, shoes: 0xe0736c },
   { hat: 'hood', scale: 1.05, width: 1.1, skin: 0xe0ac69, hair: 0x3a2414, back: false, mouth: 'flat', jacket: 'hoodie', pants: 0x1f2230, shoes: 0x222222 },
   { hat: 'bucket', scale: 0.95, width: 1, skin: 0x5c3a1e, hair: 0x0b0704, back: true, mouth: 'smile', jacket: 'open', pants: 0x4a3b2a, shoes: 0xf1f1f1 },
-  { hat: 'afro', scale: 1, width: 1, skin: 0x3b2219, hair: 0x1b1210, back: false, mouth: 'grin', jacket: 'tee', pants: 0x2a2a3a, shoes: 0xffe600 },
-  { hat: 'ponytail', scale: 1.05, width: 0.85, skin: 0xffdbac, hair: 0x3a1f0c, back: false, mouth: 'smile', jacket: 'open', pants: 0x101018, shoes: 0xff4dff },
+  { hat: 'afro', scale: 1, width: 1, skin: 0x3b2219, hair: 0x1b1210, back: false, mouth: 'grin', jacket: 'tee', pants: 0x2a2a3a, shoes: 0xc9a227 },
+  { hat: 'ponytail', scale: 1.05, width: 0.85, skin: 0xffdbac, hair: 0x3a1f0c, back: false, mouth: 'smile', jacket: 'open', pants: 0x101018, shoes: 0xa5476b },
   { hat: 'helmet', scale: 1, width: 1.15, skin: 0xc68642, hair: 0x2b1a10, back: true, mouth: 'o', jacket: 'vest', pants: 0x1f2230, shoes: 0x222222 },
-  { hat: 'headphones', scale: 0.9, width: 1, skin: 0xf1c27d, hair: 0x8a5a2a, back: false, mouth: 'smile', jacket: 'hoodie', pants: 0x3a3128, shoes: 0x00e5ff },
+  { hat: 'headphones', scale: 0.9, width: 1, skin: 0xf1c27d, hair: 0x8a5a2a, back: false, mouth: 'smile', jacket: 'hoodie', pants: 0x3a3128, shoes: 0x5f9ea0 },
   { hat: 'bandana', scale: 1.1, width: 1, skin: 0x8d5524, hair: 0x120a06, back: false, mouth: 'flat', jacket: 'tee', pants: 0x2a2a3a, shoes: 0xf1f1f1 },
-  { hat: 'antenna', scale: 1, width: 1, skin: 0x9aa0b0, hair: 0x9aa0b0, back: true, mouth: 'o', jacket: 'vest', pants: 0x30343f, shoes: 0xb4ff39 }
+  { hat: 'antenna', scale: 1, width: 1, skin: 0x9aa0b0, hair: 0x9aa0b0, back: true, mouth: 'o', jacket: 'vest', pants: 0x30343f, shoes: 0x7d9270 }
 ];
 
 // ---------- Toon materials ----------
@@ -33,7 +33,7 @@ const toonRamp = (() => {
   t.needsUpdate = true;
   return t;
 })();
-const outlineMat = new THREE.MeshBasicMaterial({ color: 0x0a0a12, side: THREE.BackSide });
+const outlineMat = new THREE.MeshBasicMaterial({ color: 0x120f0d, side: THREE.BackSide });
 
 type ToonMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshToonMaterial>;
 
@@ -196,7 +196,7 @@ export function buildCharacter(slot: number, colorHex: string): Character {
   can.material.emissiveIntensity = 0.35;
   can.position.set(0, -0.32, -0.06); armR.elbow.add(can);
   const gun = box(0.08, 0.1, 0.34, toon(0x2b2b33), 0, -0.3, -0.22); gun.visible = false; armR.elbow.add(gun);
-  const bazooka = part(new THREE.CylinderGeometry(0.11, 0.13, 1.2, 10), toon(0xff6a00));
+  const bazooka = part(new THREE.CylinderGeometry(0.11, 0.13, 1.2, 10), toon(0x9e3f1f));
   bazooka.rotation.x = Math.PI / 2; bazooka.position.set(0.22, SH_Y + 0.1, -0.2); bazooka.visible = false;
 
   body.add(legL.hip, legR.hip, torso, jacket, armL.shoulder, armR.shoulder, head, bazooka);
@@ -212,7 +212,7 @@ export function buildCharacter(slot: number, colorHex: string): Character {
   const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(tagCv), transparent: true, depthTest: false }));
   tag.scale.set(3, 0.75, 1); tag.position.y = 2.45 * L.scale; g.add(tag);
   // Shield bubble
-  const bubble = new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 12), new THREE.MeshBasicMaterial({ color: 0x4d7cff, transparent: true, opacity: 0.25 }));
+  const bubble = new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 12), new THREE.MeshBasicMaterial({ color: 0xf4efe8, transparent: true, opacity: 0.18 }));
   bubble.position.y = 1; bubble.visible = false; g.add(bubble);
 
   return {
@@ -235,8 +235,8 @@ export function updateTag(ch: Character, p: PlayerSnapshot): void {
   g.fillText(p.name, 128, 20);
   g.shadowBlur = 0;
   g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(48, 42, 160, 12);
-  g.fillStyle = '#ff3b3b'; g.fillRect(48, 42, (160 * Math.max(0, p.hp)) / 100, 12);
-  if (p.armor > 0) { g.fillStyle = '#4d7cff'; g.fillRect(48, 54, 160 * Math.min(1, p.armor / 100), 5); }
+  g.fillStyle = '#c4552f'; g.fillRect(48, 42, (160 * Math.max(0, p.hp)) / 100, 12);
+  if (p.armor > 0) { g.fillStyle = '#f4efe8'; g.fillRect(48, 54, 160 * Math.min(1, p.armor / 100), 5); }
   ch.parts.tag.material.map!.needsUpdate = true;
 }
 

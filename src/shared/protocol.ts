@@ -60,8 +60,8 @@ export interface PickupInfo { id: number; type: PickupType; x: number; y: number
 
 export type GameMode = 'ffa' | 'teams';
 /** Fixed palette for up to 4 teams. */
-export const TEAM_COLORS = ['#ff2d75', '#00e5ff', '#b4ff39', '#ffb300'];
-export const TEAM_NAMES = ['Rosa', 'Ciano', 'Lima', 'Âmbar'];
+export const TEAM_COLORS = ['#c4552f', '#c9a227', '#7d9270', '#f4efe8'];
+export const TEAM_NAMES = ['Terra', 'Ocre', 'Sálvia', 'Papel'];
 export const MAX_TEAMS = 4;
 
 export interface RoomInfo {

@@ -2,8 +2,12 @@
 import * as THREE from 'three';
 import './style.css';
 import { animateCharacter, buildCharacter, setOpacity, updateTag, type Character } from './render/characters.ts';
-import { setupHome } from './ui/home.ts';
-import { isFlashing } from './ui/hud.ts';
+import { applyStatic, t } from './core/i18n.ts';
+import { pollGamepad } from './game/gamepad.ts';
+import { renderHomeLabels, setupHome } from './ui/home.ts';
+import { setupPause } from './ui/pause.ts';
+import { audio } from './audio/audio.ts';
+import { isFlashing, updateHud } from './ui/hud.ts';
 import { setTool, tryPaint } from './game/input.ts';
 import { socket } from './net/socket.ts';
 import { aimWallTile, physics, updateCamera } from './game/physics.ts';
@@ -11,7 +15,14 @@ import { camera, pickupMeshes, renderer, scene, updateEffects } from './render/s
 import { $, buildings, flags, input, net, player } from './core/state.ts';
 
 const remote = new Map<string, Character>();
+applyStatic();
 setupHome();
+setupPause({
+  onLanguageChange: () => { renderHomeLabels(); updateHud(); },
+  onLeave: () => $('#leaveBtn').click()
+});
+// Sound needs a user gesture; show a small hint until it is unlocked.
+setTimeout(() => { if (!audio.ready) $('#audioHint').classList.remove('hidden'); }, 1500);
 
 // ---------- Simulation: fixed 60 Hz steps, accumulator keeps the remainder ----------
 const STEP = 1 / 60;
@@ -24,6 +35,7 @@ setInterval(() => {
   lastSim = now;
   if (!net.cfg) return;
   if (!flags.sim) { acc = 0; return; }
+  pollGamepad((now - lastSim + 1) / 1000);
   while (acc >= STEP) { physics(STEP); acc -= STEP; }
   if (now - lastPosSent > 50) {
     lastPosSent = now;
@@ -42,7 +54,7 @@ function frame(now: number): void {
   if (net.cfg) {
     if (!flags.freeCam) updateCamera();
     if (player.tool === 'spray' && net.state.phase === 'playing' && !player.dead && !player.stunned) tryPaint(now);
-    else $('#cross').classList.remove('can');
+    else { $('#cross').classList.remove('can'); audio.spray(false, 'me'); }
   }
 
   const seen = new Set<string>();
@@ -68,6 +80,7 @@ function frame(now: number): void {
     ch.parts.can.visible = !gunMode;
     setOpacity(ch, p.smoke ? (isMe ? 0.35 : 0.08) : 1);
     ch.parts.tag.visible = !p.smoke || isMe;
+    void t;
     if (now - ch.lastTag > 200) { ch.lastTag = now; updateTag(ch, p); }
     ch.parts.torso.material.emissive.copy(p.stunned ? new THREE.Color(0x888888) : ch.emissive);
   }

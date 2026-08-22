@@ -189,7 +189,7 @@ export function createRoom(io: IO, meta: RoomMeta, cfg: GameOptions): Room {
       for (const p of players.values()) if (p.team >= 0) totals[p.team] += p.score;
       const order = totals.map((score, team) => ({ score, team })).sort((a, b) => b.score - a.score);
       winner = order.length > 1 && order[0].score === order[1].score
-        ? { name: 'Empate', color: '#e2e8f0', score: order[0].score }
+        ? { name: 'Empate', color: '#f4efe8', score: order[0].score }
         : { name: `Equipe ${TEAM_NAMES[order[0].team]}`, color: TEAM_COLORS[order[0].team], score: order[0].score, team: order[0].team };
       return;
     }
@@ -197,7 +197,7 @@ export function createRoom(io: IO, meta: RoomMeta, cfg: GameOptions): Room {
     if (ranked.length && (ranked.length === 1 || ranked[0].score > ranked[1].score)) {
       winner = { name: ranked[0].name, color: ranked[0].color, score: ranked[0].score };
     } else {
-      winner = { name: 'Empate', color: '#e2e8f0', score: ranked[0]?.score ?? 0 };
+      winner = { name: 'Empate', color: '#f4efe8', score: ranked[0]?.score ?? 0 };
     }
   }
   function backToLobby(): void {

@@ -4,11 +4,13 @@ import * as THREE from 'three';
 import * as CITY from '../../shared/city.ts';
 import type { Building } from '../../shared/city.ts';
 import { buildingMeshes, camera } from '../render/scene.ts';
+import { audio } from '../audio/audio.ts';
 import { buildings, input, myState, net, player } from '../core/state.ts';
 
 const R = 0.45;
 const WALK = 7, RUN = 10.5, SHOES_BONUS = 1.5, DASH = 17;
 const GRAVITY = 26, JUMP = 9, CLIMB = 4.5;
+let stepClock = 0;
 
 export function spawnLocal(x: number, y: number, z: number): void {
   player.x = x; player.y = y; player.z = z; player.vy = 0; player.climbing = false;
@@ -23,7 +25,7 @@ export function physics(dt: number): void {
   const now = performance.now();
   const keys = input.keys;
   // Sprint: Shift on keyboard, joystick pushed to the edge on touch. Shoes add 50 % on top.
-  const sprinting = keys.has('shift') || (input.touch.active && Math.hypot(input.touch.x, input.touch.y) > 0.92);
+  const sprinting = keys.has('shift') || input.padSprint || (input.touch.active && Math.hypot(input.touch.x, input.touch.y) > 0.92);
   let speed = sprinting ? RUN : WALK;
   if (ms?.shoes) speed *= SHOES_BONUS;
   if (now < input.dashUntil) speed = DASH;
@@ -31,6 +33,7 @@ export function physics(dt: number): void {
   let ix = (keys.has('d') ? 1 : 0) - (keys.has('a') ? 1 : 0);
   let iz = (keys.has('s') ? 1 : 0) - (keys.has('w') ? 1 : 0);
   if (input.touch.active) { ix = input.touch.x; iz = input.touch.y; }
+  if (input.pad.active) { ix = input.pad.x; iz = input.pad.y; }
   if (!canMove) ix = iz = 0;
   const len = Math.hypot(ix, iz) || 1;
   ix /= len; iz /= len;
@@ -79,8 +82,19 @@ export function physics(dt: number): void {
     player.vy = input.superJump ? JUMP * 1.9 : JUMP;
     input.superJump = false;
     grounded = false;
+    audio.play('jump', { volume: 0.5 });
   }
+  if (grounded && !player.onGround && player.vy <= 0 && !player.climbing) audio.play('land', { volume: 0.5 });
   player.onGround = grounded;
+  // Footsteps paced by speed; climbing gets its own rustle.
+  if (grounded && moving) {
+    stepClock += dt * speed;
+    if (stepClock > 2.6) { stepClock = 0; audio.play('step', { volume: sprinting ? 0.5 : 0.35, rate: sprinting ? 1.1 : 1 }); }
+  } else if (player.climbing) {
+    stepClock += dt * 4;
+    if (stepClock > 2.2) { stepClock = 0; audio.play('climb', { volume: 0.45 }); }
+  } else stepClock = 1.5;
+  audio.setListener(player.x, player.y + 1.5, player.z, player.yaw);
   player.anim = player.climbing ? 'climb' : !grounded ? 'jump' : moving ? (sprinting ? 'sprint' : 'run') : 'idle';
   if (player.y < -5) spawnLocal(CITY.MAP_SIZE / 2, 0, CITY.MAP_SIZE / 2);
 }

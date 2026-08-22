@@ -65,6 +65,7 @@ export async function openPlayer(browser: Browser, url: string, name: string, vi
     input.value = n;
     input.dispatchEvent(new Event('change'));
     window.DBG.flags.render = r;
+    document.querySelector('#audioHint')?.remove(); // no user gesture in the harness
   }, name, !viewport);
   await page.waitForFunction((n) => window.DBG.state().players.find((p: any) => p.id === window.DBG.socket.id)?.name === n, { timeout: 5000, polling: 100 }, name);
   return page;

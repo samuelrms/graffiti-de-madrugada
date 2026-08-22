@@ -12,8 +12,8 @@ renderer.shadowMap.enabled = true;
 document.body.prepend(renderer.domElement);
 
 export const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x070812);
-scene.fog = new THREE.Fog(0x070812, 40, 140);
+scene.background = new THREE.Color(0x141110);
+scene.fog = new THREE.Fog(0x141110, 40, 140);
 
 export const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 300);
 addEventListener('resize', () => {
@@ -23,8 +23,8 @@ addEventListener('resize', () => {
 });
 
 // ---------- Lights: moon + hemisphere + street lamps ----------
-scene.add(new THREE.HemisphereLight(0x4a5aa0, 0x221828, 1.0));
-const moon = new THREE.DirectionalLight(0xbfd0ff, 1.1);
+scene.add(new THREE.HemisphereLight(0x6f6a66, 0x1f1815, 0.95));
+const moon = new THREE.DirectionalLight(0xece3d6, 1.05);
 moon.position.set(60, 120, 40);
 moon.castShadow = true;
 moon.shadow.mapSize.set(2048, 2048);
@@ -41,7 +41,8 @@ const matCache: Record<string, THREE.MeshStandardMaterial> = {};
 function buildingMaterial(b: Building): THREE.MeshStandardMaterial {
   const key = `${b.kind}:${Math.round(b.hue * 8)}`;
   if (matCache[key]) return matCache[key];
-  const base = new THREE.Color().setHSL(b.hue, 0.18, b.kind === 'tower' ? 0.22 : 0.3);
+  // warm, desaturated facades (hue squeezed into the earth range)
+  const base = new THREE.Color().setHSL(0.03 + b.hue * 0.09, 0.22, b.kind === 'tower' ? 0.2 : 0.28);
   const cv = document.createElement('canvas');
   cv.width = 64; cv.height = 64;
   const g = cv.getContext('2d')!;
@@ -49,7 +50,7 @@ function buildingMaterial(b: Building): THREE.MeshStandardMaterial {
   const cols = b.kind === 'house' ? 2 : 4, rows = b.kind === 'house' ? 2 : 4;
   for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
     const lit = Math.random() < 0.45;
-    g.fillStyle = lit ? `hsl(${40 + Math.random() * 20} 90% ${55 + Math.random() * 20}%)` : '#0c0d16';
+    g.fillStyle = lit ? `hsl(${32 + Math.random() * 14} 85% ${58 + Math.random() * 16}%)` : '#120f0d';
     g.fillRect(6 + i * (52 / cols), 6 + j * (52 / rows), 52 / cols - 6, 52 / rows - 6);
   }
   const tex = new THREE.CanvasTexture(cv);
@@ -75,14 +76,14 @@ buildings.forEach((b, bi) => {
   if (b.kind === 'house') {
     const roof = new THREE.Mesh(
       new THREE.ConeGeometry(Math.max(b.w, b.d) * 0.72, 2.2, 4),
-      new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(b.hue, 0.5, 0.28), roughness: 1 })
+      new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(0.02 + b.hue * 0.08, 0.45, 0.26), roughness: 1 })
     );
     roof.rotation.y = Math.PI / 4;
     roof.position.set(b.x, b.h + 1.1, b.z);
     roof.castShadow = true;
     cityGroup.add(roof);
   } else {
-    const rim = new THREE.Mesh(new THREE.BoxGeometry(b.w + 0.4, 0.4, b.d + 0.4), new THREE.MeshStandardMaterial({ color: 0x1a1a24 }));
+    const rim = new THREE.Mesh(new THREE.BoxGeometry(b.w + 0.4, 0.4, b.d + 0.4), new THREE.MeshStandardMaterial({ color: 0x26211d }));
     rim.position.set(b.x, b.h + 0.2, b.z);
     cityGroup.add(rim);
   }
@@ -90,13 +91,13 @@ buildings.forEach((b, bi) => {
 scene.add(cityGroup);
 
 // Ground, sidewalks, street markings
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(CITY.MAP_SIZE + 400, CITY.MAP_SIZE + 400), new THREE.MeshStandardMaterial({ color: 0x15141c, roughness: 1 }));
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(CITY.MAP_SIZE + 400, CITY.MAP_SIZE + 400), new THREE.MeshStandardMaterial({ color: 0x1a1714, roughness: 1 }));
 ground.rotation.x = -Math.PI / 2;
 ground.position.set(CITY.MAP_SIZE / 2, -0.01, CITY.MAP_SIZE / 2);
 ground.receiveShadow = true;
 scene.add(ground);
-const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x2a2833, roughness: 1 });
-const lineMat = new THREE.MeshBasicMaterial({ color: 0x8a8a6a });
+const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x2e2925, roughness: 1 });
+const lineMat = new THREE.MeshBasicMaterial({ color: 0xbfa27a });
 for (let i = 0; i < CITY.BLOCKS; i++) for (let j = 0; j < CITY.BLOCKS; j++) {
   const sw = new THREE.Mesh(new THREE.BoxGeometry(CITY.BLOCK + 2, 0.2, CITY.BLOCK + 2), sidewalkMat);
   sw.position.set(CITY.STREET + i * CITY.CELL + CITY.BLOCK / 2, 0.1, CITY.STREET + j * CITY.CELL + CITY.BLOCK / 2);
@@ -111,8 +112,8 @@ for (let i = 0; i <= CITY.BLOCKS; i++) {
   l2.rotation.x = -Math.PI / 2; l2.position.set(CITY.MAP_SIZE / 2, 0.01, c); scene.add(l2);
 }
 // Street lamps next to every spawn (off to the side so they never block the camera)
-const lampMat = new THREE.MeshStandardMaterial({ color: 0x444455 });
-const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffd27a });
+const lampMat = new THREE.MeshStandardMaterial({ color: 0x3a3430 });
+const bulbMat = new THREE.MeshBasicMaterial({ color: 0xf4d39a });
 CITY.spawnPoints().forEach((s) => {
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 6), lampMat);
   pole.position.set(s.x - 4.5, 3, s.z + 4.5); scene.add(pole);
@@ -122,7 +123,7 @@ CITY.spawnPoints().forEach((s) => {
   light.position.copy(bulb.position); scene.add(light);
 });
 // Map boundary: neon fence
-const fence = new THREE.Mesh(new THREE.BoxGeometry(CITY.MAP_SIZE, 3, CITY.MAP_SIZE), new THREE.MeshBasicMaterial({ color: 0xff2d75, wireframe: true, transparent: true, opacity: 0.25 }));
+const fence = new THREE.Mesh(new THREE.BoxGeometry(CITY.MAP_SIZE, 3, CITY.MAP_SIZE), new THREE.MeshBasicMaterial({ color: 0xc4552f, wireframe: true, transparent: true, opacity: 0.3 }));
 fence.position.set(CITY.MAP_SIZE / 2, 1.5, CITY.MAP_SIZE / 2);
 scene.add(fence);
 
@@ -168,11 +169,11 @@ export function clearPaint(): void {
 // ---------- Pickups ----------
 export const pickupMeshes: THREE.Group[] = [];
 const PICKUP_LOOK: Record<PickupType, { color: number; geo: THREE.BufferGeometry; label: string }> = {
-  bazooka: { color: 0xff6a00, geo: new THREE.CylinderGeometry(0.25, 0.3, 1.6), label: 'BAZUCA' },
-  vest: { color: 0x4d7cff, geo: new THREE.BoxGeometry(0.9, 1, 0.4), label: 'COLETE' },
-  shoes: { color: 0xb4ff39, geo: new THREE.BoxGeometry(0.9, 0.4, 0.5), label: 'TÊNIS' },
-  doublecan: { color: 0xff2d75, geo: new THREE.CylinderGeometry(0.3, 0.3, 0.9), label: 'LATA 2X' },
-  medkit: { color: 0xff3b3b, geo: new THREE.BoxGeometry(0.8, 0.8, 0.8), label: 'KIT' }
+  bazooka: { color: 0xc4552f, geo: new THREE.CylinderGeometry(0.25, 0.3, 1.6), label: 'BAZUCA' },
+  vest: { color: 0xf4efe8, geo: new THREE.BoxGeometry(0.9, 1, 0.4), label: 'COLETE' },
+  shoes: { color: 0x7d9270, geo: new THREE.BoxGeometry(0.9, 0.4, 0.5), label: 'TÊNIS' },
+  doublecan: { color: 0xd98e4a, geo: new THREE.CylinderGeometry(0.3, 0.3, 0.9), label: 'LATA 2X' },
+  medkit: { color: 0xe0736c, geo: new THREE.BoxGeometry(0.8, 0.8, 0.8), label: 'KIT' }
 };
 function makeLabel(text: string, color: string): THREE.Sprite {
   const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;

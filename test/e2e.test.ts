@@ -38,7 +38,7 @@ test('two browsers play a round: lobby → paint → climb → kill', { skip: !c
     // A second tab of Mina's browser (same localStorage token) is refused.
     const tab2 = await a.browserContext().newPage();
     await tab2.goto(`${url}/#r=${roomId}`, { waitUntil: 'networkidle0' });
-    await tab2.waitForFunction(() => document.querySelector('#homeError')?.textContent?.includes('outra aba'), { timeout: 8000, polling: 200 });
+    await tab2.waitForFunction(() => /outra aba|another tab/.test(document.querySelector('#homeError')?.textContent ?? ''), { timeout: 8000, polling: 200 });
     await tab2.close();
     assert.equal(await a.evaluate(() => window.DBG.state().players.length), 2);
     // Owner (Mina) switches to 2 teams: one per side, team colours applied.
@@ -79,6 +79,19 @@ test('two browsers play a round: lobby → paint → climb → kill', { skip: !c
     const other = await B.me(b);
     assert.equal(other.score, 0);
     assert.ok(await b.evaluate(() => window.DBG.state().players.some((p: any) => p.tiles > 0)), 'other client sees the score');
+
+    // Pause menu: Esc opens it, language switch re-renders the UI, Esc closes it.
+    await a.keyboard.press('Escape');
+    await a.waitForSelector('#pause:not(.hidden)', { timeout: 3000 });
+    await a.select('#setLang', 'pt-BR');
+    assert.equal(await a.evaluate(() => document.querySelector('#pauseResume')?.textContent), 'Continuar');
+    await a.select('#setLang', 'en');
+    assert.equal(await a.evaluate(() => document.querySelector('#pauseResume')?.textContent), 'Resume');
+    assert.equal(await a.evaluate(() => document.documentElement.lang), 'en');
+    assert.match(await a.evaluate(() => document.querySelector('#tool')?.textContent ?? ''), /Paint pistol/);
+    await a.keyboard.press('Escape');
+    await a.waitForSelector('#pause.hidden', { timeout: 3000 });
+    assert.ok(await a.evaluate(() => !!(window as any).AudioContext), 'Web Audio available');
 
     // Climbing: hold W + Space against the wall.
     const climbed = await B.holdUntil(a, ['w', ' '], () => window.DBG.player.y > 5, 10000);
