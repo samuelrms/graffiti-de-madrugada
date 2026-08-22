@@ -15,7 +15,7 @@ const built = fs.existsSync(path.join(staticDir, 'index.html'));
 const chrome = B.findChrome();
 
 test('two browsers play a round: lobby → paint → climb → kill', { skip: !chrome ? 'Chrome not found (set CHROME_PATH)' : !built ? 'client not built (pnpm build:client)' : false, timeout: 240000 }, async () => {
-  const game = createGame({ port: 0, quiet: true, countdownSeconds: 0.5, matchSeconds: 600, staticDir });
+  const game = createGame({ port: 0, quiet: true, countdownSeconds: 0.5, matchSeconds: 600, staticDir, maxPerIp: 0 });
   await game.ready;
   const url = `http://localhost:${game.port}`;
   const browser = await B.launch({ width: 640, height: 360 });
@@ -35,6 +35,18 @@ test('two browsers play a round: lobby → paint → climb → kill', { skip: !c
     const b = await B.openPlayer(browser, url, 'Zé', { width: 320, height: 200 }, roomId);
     assert.equal(await B.phase(a), 'lobby');
     assert.equal(await a.evaluate(() => window.DBG.state().players.map((p: any) => p.name).sort().join(',')), 'Mina,Zé');
+    // A second tab of Mina's browser (same localStorage token) is refused.
+    const tab2 = await a.browserContext().newPage();
+    await tab2.goto(`${url}/#r=${roomId}`, { waitUntil: 'networkidle0' });
+    await tab2.waitForFunction(() => document.querySelector('#homeError')?.textContent?.includes('outra aba'), { timeout: 8000, polling: 200 });
+    await tab2.close();
+    assert.equal(await a.evaluate(() => window.DBG.state().players.length), 2);
+    // Owner (Mina) switches to 2 teams: one per side, team colours applied.
+    await a.select('#modeSelect', 'teams');
+    await a.waitForFunction(() => window.DBG.state().players.every((p: any) => p.team >= 0), { timeout: 5000, polling: 200 });
+    assert.deepEqual(await a.evaluate(() => window.DBG.state().players.map((p: any) => p.team).sort()), [0, 1]);
+    await a.select('#modeSelect', 'ffa');
+    await a.waitForFunction(() => window.DBG.state().players.every((p: any) => p.team === -1), { timeout: 5000, polling: 200 });
     await B.ready(a);
     await B.sleep(300);
     assert.equal(await B.phase(a), 'lobby', 'waits for everyone');
@@ -97,6 +109,14 @@ test('two browsers play a round: lobby → paint → climb → kill', { skip: !c
     assert.equal((await B.me(a)).kills, 1);
     assert.ok(await a.evaluate(() => document.querySelector('#feed')!.textContent!.includes('Zé')), 'kill feed shows the victim');
     await a.waitForFunction(() => !window.DBG.state().players.find((p: any) => p.name === 'Zé').dead, { timeout: 6000, polling: 200 });
+    // Owner leaves: Zé inherits the room; when he leaves too the room is destroyed.
+    await a.evaluate(() => window.DBG.socket.emit('leave'));
+    await b.waitForFunction(() => document.querySelector('#roomBadge')?.textContent, { timeout: 5000, polling: 200 });
+    await B.sleep(300);
+    assert.equal((await (await fetch(`${url}/api/rooms/${roomId}`)).json()).ownerId, await b.evaluate(() => window.DBG.socket.id));
+    await b.evaluate(() => window.DBG.socket.emit('leave'));
+    await B.sleep(300);
+    assert.equal((await fetch(`${url}/api/rooms/${roomId}`)).status, 404, 'room destroyed when empty');
   } finally {
     await browser.close();
     await game.close();

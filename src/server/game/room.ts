@@ -1,8 +1,10 @@
 import type { Server, Socket } from 'socket.io';
 import * as CITY from '../../shared/city.ts';
 import type { Building, PickupPoint } from '../../shared/city.ts';
-import type {
-  Anim, ClientToServer, KillWeapon, Phase, PlayerSnapshot, RoomInfo, ServerToClient, StateSnapshot, WeaponName, Winner
+import {
+  MAX_TEAMS, TEAM_COLORS, TEAM_NAMES,
+  type Anim, type ClientToServer, type GameMode, type KillWeapon, type Phase, type PlayerSnapshot, type RoomInfo,
+  type ServerToClient, type StateSnapshot, type WeaponName, type Winner
 } from '../../shared/protocol.ts';
 import {
   CLASS_POWER, COLORS, DEATH_TILE_LOSS, KILL_BONUS, MAX_HP, MAX_Y, MELEE_COOLDOWN_MS, MELEE_DAMAGE,
@@ -17,7 +19,10 @@ interface Player {
   id: string;
   slot: number;
   name: string;
+  /** slot colour in FFA, team colour in teams mode */
   color: string;
+  team: number;
+  joinedAt: number;
   x: number; y: number; z: number; rot: number;
   anim: Anim;
   hp: number;
@@ -54,6 +59,9 @@ export interface RoomMeta { id: string; name: string; locked: boolean }
 export interface Room extends RoomMeta {
   readonly phase: Phase;
   readonly size: number;
+  readonly ownerId: string;
+  readonly mode: GameMode;
+  readonly teams: number;
   /** ms timestamp since the room has been empty (0 while occupied) */
   readonly emptySince: number;
   info(): RoomInfo;
@@ -61,7 +69,12 @@ export interface Room extends RoomMeta {
   join(socket: GameSocket, name?: string): boolean;
   leave(socket: GameSocket): void;
   tick(): void;
+  /** Kicks everyone (they receive `roomClosed`). */
   destroy(): void;
+  /** Called by the registry when the last player leaves. */
+  onEmpty?: () => void;
+  /** Called for every socket that leaves (voluntarily, disconnect or room destroyed). */
+  onLeave?: (socket: GameSocket) => void;
 }
 
 // Shared by every room; generating the city is cheap but there is no reason to repeat it.
@@ -80,6 +93,11 @@ export function createRoom(io: IO, meta: RoomMeta, cfg: GameOptions): Room {
   const players = new Map<string, Player>();
   const sockets = new Map<string, GameSocket>();
   let emptySince = Date.now();
+  let ownerId = '';
+  let mode: GameMode = 'ffa';
+  let teams = 2;
+  // eslint-disable-next-line prefer-const -- assigned at the end; closures read it at call time
+  let room: Room;
   let paint = new Map<string, number>(); // tileKey -> slot
   let phase: Phase = 'lobby';
   let phaseEndsAt = 0;
@@ -110,9 +128,36 @@ export function createRoom(io: IO, meta: RoomMeta, cfg: GameOptions): Room {
     emit('respawned', { id: p.id, x: p.x, y: p.y, z: p.z });
   }
 
+  // ---------- Teams ----------
+  const teamOf = (p: Player) => (mode === 'teams' ? p.team : -1);
+  const sameTeam = (a: Player, b: Player) => mode === 'teams' && a.team === b.team;
+  function smallestTeam(): number {
+    const counts = new Array<number>(teams).fill(0);
+    for (const p of players.values()) if (p.team >= 0 && p.team < teams) counts[p.team]++;
+    let best = 0;
+    for (let t = 1; t < teams; t++) if (counts[t] < counts[best]) best = t;
+    return best;
+  }
+  /** Deal players round-robin by join order so teams differ by at most one. Lobby only. */
+  function rebalance(): void {
+    if (phase !== 'lobby') return;
+    const ordered = [...players.values()].sort((a, b) => a.joinedAt - b.joinedAt);
+    ordered.forEach((p, i) => { p.team = mode === 'teams' ? i % teams : -1; });
+    for (const p of players.values()) applyColor(p);
+  }
+  function applyColor(p: Player): void {
+    p.color = mode === 'teams' ? TEAM_COLORS[p.team] : COLORS[p.slot];
+  }
+  function setMode(nextMode: GameMode, nextTeams: number): void {
+    mode = nextMode;
+    teams = Math.max(2, Math.min(MAX_TEAMS, Math.floor(nextTeams) || 2));
+    rebalance();
+    emit('roomInfo', info());
+  }
+
   function newPlayer(id: string, slot: number): Player {
     const p = {
-      id, slot, name: `Crew${slot + 1}`, color: COLORS[slot],
+      id, slot, name: `Crew${slot + 1}`, color: COLORS[slot], team: -1, joinedAt: Date.now(),
       x: 0, y: 0, z: 0, rot: 0, anim: 'idle', hp: MAX_HP, armor: 0, dead: false, respawnAt: 0, stunUntil: 0,
       weapon: 'pistol', ammo: Infinity, shoesUntil: 0, doubleUntil: 0, shieldUntil: 0, smokeUntil: 0,
       freeMoveUntil: 0, lastPosAt: 0, violations: 0, score: 0, tiles: 0, kills: 0, deaths: 0, ready: false,
@@ -139,6 +184,15 @@ export function createRoom(io: IO, meta: RoomMeta, cfg: GameOptions): Room {
   function startMatch(): void { phase = 'playing'; phaseEndsAt = Date.now() + cfg.matchSeconds * 1000; }
   function endMatch(): void {
     phase = 'ended'; phaseEndsAt = 0;
+    if (mode === 'teams') {
+      const totals = new Array<number>(teams).fill(0);
+      for (const p of players.values()) if (p.team >= 0) totals[p.team] += p.score;
+      const order = totals.map((score, team) => ({ score, team })).sort((a, b) => b.score - a.score);
+      winner = order.length > 1 && order[0].score === order[1].score
+        ? { name: 'Empate', color: '#e2e8f0', score: order[0].score }
+        : { name: `Equipe ${TEAM_NAMES[order[0].team]}`, color: TEAM_COLORS[order[0].team], score: order[0].score, team: order[0].team };
+      return;
+    }
     const ranked = [...players.values()].sort((a, b) => b.score - a.score);
     if (ranked.length && (ranked.length === 1 || ranked[0].score > ranked[1].score)) {
       winner = { name: ranked[0].name, color: ranked[0].color, score: ranked[0].score };
@@ -149,6 +203,7 @@ export function createRoom(io: IO, meta: RoomMeta, cfg: GameOptions): Room {
   function backToLobby(): void {
     phase = 'lobby'; phaseEndsAt = 0; winner = null; paint = new Map();
     for (const p of players.values()) resetPlayer(p);
+    rebalance();
     emit('reset');
   }
   function bySlot(slot: number): Player | null {
@@ -159,6 +214,7 @@ export function createRoom(io: IO, meta: RoomMeta, cfg: GameOptions): Room {
   // ---------- Combat ----------
   function damage(target: Player, amount: number, by: Player | null, now: number): void {
     if (target.dead || phase !== 'playing') return;
+    if (by && by !== target && sameTeam(by, target)) return; // no friendly fire
     if (now < target.shieldUntil) amount *= 0.5;
     const absorbed = Math.min(target.armor, amount * 0.7);
     target.armor -= absorbed;
@@ -207,7 +263,7 @@ export function createRoom(io: IO, meta: RoomMeta, cfg: GameOptions): Room {
 
   function snapshot(now: number): StateSnapshot {
     const list: PlayerSnapshot[] = [...players.values()].map((p) => ({
-      id: p.id, slot: p.slot, name: p.name, color: p.color, cls: p.slot % 4, ready: p.ready, deaths: p.deaths,
+      id: p.id, slot: p.slot, name: p.name, color: p.color, cls: p.slot % 4, team: teamOf(p), ready: p.ready, deaths: p.deaths,
       x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), rot: +p.rot.toFixed(2),
       anim: p.anim, score: p.score, tiles: p.tiles, kills: p.kills,
       hp: Math.round(p.hp), armor: Math.round(p.armor), dead: p.dead,
@@ -229,10 +285,10 @@ export function createRoom(io: IO, meta: RoomMeta, cfg: GameOptions): Room {
   }
 
   function info(): RoomInfo {
-    return { id: meta.id, name: meta.name, locked: meta.locked, players: players.size, maxPlayers: cfg.maxPlayers, phase };
+    return { id: meta.id, name: meta.name, locked: meta.locked, players: players.size, maxPlayers: cfg.maxPlayers, phase, mode, teams, ownerId };
   }
 
-  const EVENTS = ['pos', 'paint', 'shoot', 'melee', 'power', 'rename', 'ready', 'restart', 'leave'] as const;
+  const EVENTS = ['pos', 'paint', 'shoot', 'melee', 'power', 'rename', 'ready', 'restart', 'leave', 'setMode', 'closeRoom'] as const;
 
   function leave(socket: GameSocket): void {
     if (!players.has(socket.id)) return;
@@ -240,7 +296,14 @@ export function createRoom(io: IO, meta: RoomMeta, cfg: GameOptions): Room {
     sockets.delete(socket.id);
     socket.leave(meta.id);
     for (const e of EVENTS) socket.removeAllListeners(e);
-    if (players.size === 0) emptySince = Date.now();
+    if (ownerId === socket.id) {
+      // Ownership passes to whoever has been here the longest.
+      const next = [...players.values()].sort((a, b) => a.joinedAt - b.joinedAt)[0];
+      ownerId = next?.id ?? '';
+    }
+    rebalance();
+    room.onLeave?.(socket);
+    if (players.size === 0) { emptySince = Date.now(); emit('roomInfo', info()); room.onEmpty?.(); return; }
     emit('roomInfo', info());
   }
 
@@ -253,6 +316,9 @@ export function createRoom(io: IO, meta: RoomMeta, cfg: GameOptions): Room {
     players.set(socket.id, p);
     sockets.set(socket.id, socket);
     emptySince = 0;
+    if (!ownerId) ownerId = socket.id;
+    if (mode === 'teams') p.team = phase === 'lobby' ? -1 : smallestTeam();
+    if (phase === 'lobby') rebalance(); else applyColor(p);
     socket.join(meta.id);
     socket.emit('welcome', {
       room: info(),
@@ -300,11 +366,10 @@ export function createRoom(io: IO, meta: RoomMeta, cfg: GameOptions): Room {
       if (Math.hypot(c.x - me.x, c.y - (me.y + 1), c.z - me.z) > PAINT_RANGE) return;
       const prevSlot = paint.get(key);
       if (prevSlot === me.slot) return;
+      const prev = prevSlot !== undefined && prevSlot >= 0 ? bySlot(prevSlot) : null;
+      if (prev && sameTeam(prev, me)) return; // already ours
       const value = CITY.tileValue(t.j) * (now < me.doubleUntil ? 2 : 1);
-      if (prevSlot !== undefined && prevSlot >= 0) {
-        const prev = bySlot(prevSlot);
-        if (prev) { prev.score -= CITY.tileValue(t.j); prev.tiles--; }
-      }
+      if (prev) { prev.score -= CITY.tileValue(t.j); prev.tiles--; }
       paint.set(key, me.slot);
       me.score += value; me.tiles++;
       me.paintReadyAt = now + PAINT_COOLDOWN_MS;
@@ -332,7 +397,7 @@ export function createRoom(io: IO, meta: RoomMeta, cfg: GameOptions): Room {
       if (dy < 0) tHit = Math.min(tHit, -oy / dy); // ground
       let victim: Player | null = null;
       for (const o of players.values()) {
-        if (o === me || o.dead) continue;
+        if (o === me || o.dead || sameTeam(o, me)) continue;
         const t = raySphere(ox, oy, oz, dx, dy, dz, o.x, o.y + 0.9, o.z, 0.8);
         if (t < tHit) { tHit = t; victim = o; }
       }
@@ -358,7 +423,7 @@ export function createRoom(io: IO, meta: RoomMeta, cfg: GameOptions): Room {
       me.lastWeapon = 'melee';
       const fx = -Math.sin(me.rot), fz = -Math.cos(me.rot);
       for (const o of players.values()) {
-        if (o === me || o.dead) continue;
+        if (o === me || o.dead || sameTeam(o, me)) continue;
         const dx = o.x - me.x, dy = o.y - me.y, dz = o.z - me.z;
         const dist = Math.hypot(dx, dz);
         if (dist > MELEE_RANGE || Math.abs(dy) > 2) continue;
@@ -398,18 +463,31 @@ export function createRoom(io: IO, meta: RoomMeta, cfg: GameOptions): Room {
     // After a match everyone goes back to the lobby and must ready up again.
     socket.on('restart', () => { if (phase === 'ended') backToLobby(); });
     socket.on('leave', () => leave(socket));
+    socket.on('setMode', (m) => {
+      if (socket.id !== ownerId || phase !== 'lobby' || !m) return;
+      if (m.mode !== 'ffa' && m.mode !== 'teams') return;
+      setMode(m.mode, Number(m.teams) || teams);
+    });
+    socket.on('closeRoom', () => { if (socket.id === ownerId) room.destroy(); });
     emit('roomInfo', info());
     return true;
   }
 
-  return {
+  room = {
     get id() { return meta.id; },
     get name() { return meta.name; },
     get locked() { return meta.locked; },
     get phase() { return phase; },
     get size() { return players.size; },
     get emptySince() { return emptySince; },
+    get ownerId() { return ownerId; },
+    get mode() { return mode; },
+    get teams() { return teams; },
     info, join, leave, tick,
-    destroy() { for (const s of [...sockets.values()]) leave(s); }
+    destroy() {
+      emit('roomClosed');
+      for (const s of [...sockets.values()]) leave(s);
+    }
   };
+  return room;
 }

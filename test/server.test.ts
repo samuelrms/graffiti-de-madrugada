@@ -16,15 +16,16 @@ interface Client { socket: Socket; state: StateSnapshot; welcome: Welcome; event
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const city = C.generateCity();
 
-function connect(port: number, room: string, name?: string): Promise<Client> {
+let clientSeq = 0;
+function connect(port: number, room: string, name?: string, client: string = `c${++clientSeq}`): Promise<Client> {
   return new Promise((resolve, reject) => {
     const s = io(`http://localhost:${port}`, { transports: ['websocket'], forceNew: true });
     const data = { socket: s, state: null, welcome: null, events: [] } as unknown as Client;
     s.on('welcome', (w) => { data.welcome = w; resolve(data); });
     s.on('joinError', (e) => { if (e.reason === 'full') resolve({ socket: s, full: true } as Client); else { s.close(); reject(new Error(`joinError ${e.reason}`)); } });
-    s.on('connect', () => s.emit('join', { room, name }));
+    s.on('connect', () => s.emit('join', { room, name, client }));
     s.on('state', (st) => { data.state = st; });
-    for (const e of ['painted', 'shot', 'hit', 'damaged', 'killed', 'pickup', 'power', 'respawned', 'reset']) s.on(e, (d) => data.events.push({ e, d }));
+    for (const e of ['painted', 'shot', 'hit', 'damaged', 'killed', 'pickup', 'power', 'respawned', 'reset', 'roomClosed', 'roomInfo']) s.on(e, (d) => data.events.push({ e, d }));
     s.on('connect_error', reject);
   });
 }
@@ -42,7 +43,8 @@ const placeNextToWall = (c: Client, bi: number, face: Face, extra: Record<string
 };
 
 async function setup(t: TestContext, opts: Partial<GameOptions> = {}) {
-  const game = createGame({ port: 0, quiet: true, countdownSeconds: 0.2, validateMovement: false, ...opts });
+  // Tests connect from one IP, so the per-IP limit is off unless a test opts in.
+  const game = createGame({ port: 0, quiet: true, countdownSeconds: 0.2, validateMovement: false, maxPerIp: 0, ...opts });
   await game.ready;
   const room = game.createRoom('Teste');
   const clients: Client[] = [];
@@ -50,8 +52,8 @@ async function setup(t: TestContext, opts: Partial<GameOptions> = {}) {
   return {
     game,
     room,
-    add: async (ready = true, roomKey: string = room.id, name?: string) => {
-      const c = await connect(game.port, roomKey, name);
+    add: async (ready = true, roomKey: string = room.id, name?: string, client?: string) => {
+      const c = await connect(game.port, roomKey, name, client);
       clients.push(c);
       if (ready && !c.full) c.socket.emit('ready', true);
       return c;
@@ -108,18 +110,107 @@ test('rooms are isolated: paint and phase in one room do not leak into another',
   assert.equal(me(b).score, 0);
 });
 
-test('leaving a room frees the slot; empty rooms survive inside the TTL', async (t) => {
+test('rooms die when the last player leaves; unused rooms survive inside the TTL', async (t) => {
+  const { game, room, add } = await setup(t);
+  assert.ok(game.rooms.has(room.id), 'created but unused: kept for a while');
+  const a = await add(false);
+  const b = await add(false);
+  await until(() => room.size === 2);
+  a.socket.emit('leave');
+  await until(() => room.size === 1);
+  assert.ok(game.rooms.has(room.id), 'still occupied');
+  b.socket.close();
+  await until(() => !game.rooms.has(room.id));
+  await assert.rejects(add(false), /not-found/, 'destroyed room cannot be joined');
+});
+
+test('one player per browser token; per-IP limit is configurable', async (t) => {
+  const { add } = await setup(t);
+  await add(false, undefined, 'Tab1', 'browser-A');
+  await assert.rejects(add(false, undefined, 'Tab2', 'browser-A'), /duplicate/, 'second tab of the same browser');
+  const other = await add(false, undefined, 'Other', 'browser-B');
+  assert.equal(other.welcome.slot, 1);
+  other.socket.emit('leave');
+  await wait(100);
+  const back = await add(false, undefined, 'Back', 'browser-B');
+  assert.equal(back.welcome.slot, 1, 'token released on leave');
+});
+
+test('default MAX_PER_IP=1 blocks a second player from the same address', async (t) => {
+  const { game, add } = await setup(t, { maxPerIp: 1 });
+  const a = await add(false, undefined, 'A', 'browser-A');
+  await assert.rejects(add(false, undefined, 'B', 'browser-B'), /ip-limit/);
+  a.socket.close();
+  await wait(150);
+  const fresh = game.createRoom('Outra');
+  const c = await add(false, fresh.id, 'C', 'browser-C');
+  assert.equal(c.welcome.slot, 0, 'IP released on disconnect');
+});
+
+test('owner: first in, passes on leave, can set mode and close the room', async (t) => {
   const { game, room, add } = await setup(t);
   const a = await add(false);
-  await until(() => room.size === 1);
+  const b = await add(false);
+  const c = await add(false);
+  await until(() => room.size === 3);
+  assert.equal(room.ownerId, a.socket.id);
+  assert.equal(a.welcome.room.ownerId, a.socket.id);
+  b.socket.emit('setMode', { mode: 'teams', teams: 2 }); // not the owner: ignored
+  await wait(100);
+  assert.equal(room.mode, 'ffa');
+  a.socket.emit('setMode', { mode: 'teams', teams: 9 }); // clamped to 4
+  await until(() => room.mode === 'teams');
+  assert.equal(room.teams, 4);
   a.socket.emit('leave');
-  await until(() => room.size === 0);
-  assert.ok(room.emptySince > 0);
-  const again = await add(false);
-  assert.equal(again.welcome.slot, 0);
-  again.socket.close();
-  await until(() => room.size === 0);
+  await until(() => room.ownerId !== a.socket.id);
+  assert.equal(room.ownerId, b.socket.id, `owner should pass to b (size ${room.size})`);
+  c.socket.emit('closeRoom'); // not the owner
+  await wait(100);
   assert.ok(game.rooms.has(room.id));
+  b.socket.emit('closeRoom');
+  await until(() => !game.rooms.has(room.id));
+  await until(() => c.events.some((e) => e.e === 'roomClosed'));
+});
+
+test('teams: balanced assignment, rebalanced on leave, no friendly fire, team winner', async (t) => {
+  const { room, add } = await setup(t, { matchSeconds: 0.8 });
+  const a = await add(false);
+  await until(() => room.size === 1);
+  a.socket.emit('setMode', { mode: 'teams', teams: 2 });
+  await until(() => room.mode === 'teams');
+  const b = await add(false);
+  const c = await add(false);
+  const d = await add(false);
+  await until(() => room.size === 4 && a.state.players.length === 4);
+  const teamsOf = () => a.state.players.map((p) => p.team);
+  assert.deepEqual(teamsOf(), [0, 1, 0, 1]);
+  assert.equal(me(a).color, me(c).color, 'teammates share the team colour');
+  assert.notEqual(me(a).color, me(b).color);
+  d.socket.emit('leave');
+  await until(() => a.state.players.length === 3);
+  assert.deepEqual(teamsOf().sort(), [0, 0, 1]);
+  for (const x of [a, b, c]) x.socket.emit('ready', true);
+  await until(() => room.phase === 'playing');
+  // a and c are teammates: shooting c does nothing; shooting b hurts.
+  a.socket.emit('pos', { x: 100, y: 0, z: 100, rot: 0, anim: 'idle' });
+  c.socket.emit('pos', { x: 103, y: 0, z: 100, rot: 0, anim: 'idle' });
+  b.socket.emit('pos', { x: 106, y: 0, z: 100, rot: 0, anim: 'idle' });
+  await wait(80);
+  a.socket.emit('shoot', { ox: 100, oy: 1.4, oz: 100, dx: 1, dy: 0, dz: 0 });
+  await until(() => me(b).hp < 100, 2000);
+  assert.equal(me(c).hp, 100, 'teammate neither blocks nor takes the shot');
+  placeNextToWall(a, 0, 1);
+  placeNextToWall(c, 0, 1);
+  await wait(80);
+  a.socket.emit('paint', C.tileKey(0, 1, 0, 0));
+  await until(() => me(a).score === 1);
+  c.socket.emit('paint', C.tileKey(0, 1, 0, 0)); // already the team's tile
+  await wait(250);
+  assert.equal(me(c).score, 0);
+  assert.equal(me(a).score, 1);
+  await until(() => a.state.phase === 'ended', 4000);
+  assert.equal(a.state.winner!.team, 0);
+  assert.match(a.state.winner!.name, /Equipe/);
 });
 
 test('room ids avoid look-alike characters and names are sanitized', () => {

@@ -47,12 +47,19 @@ export async function createRoom(url: string, name: string, locked = false): Pro
 
 /** Opens a player tab straight into a room (deep link). Bot pages (viewport given) stop rendering so the CPU stays free for the page we screenshot. */
 export async function openPlayer(browser: Browser, url: string, name: string, viewport?: Viewport, roomId?: string): Promise<Page> {
-  const page = await browser.newPage();
+  // Each player gets its own browser context (separate localStorage => separate client token).
+  const ctx = await browser.createBrowserContext();
+  const page = await ctx.newPage();
   if (viewport) await page.setViewport(viewport);
   page.on('pageerror', (e) => console.error(`[${name}] pageerror`, (e as Error).message));
-  await page.goto(roomId ? `${url}/#r=${roomId}` : url, { waitUntil: 'networkidle0' });
+  await page.goto(roomId ? `${url}/#r=${roomId}` : url, { waitUntil: 'load', timeout: 60000 });
   if (!roomId) return page; // caller drives the home screen
-  await page.waitForFunction(() => window.DBG && window.DBG.state().players.length > 0, { timeout: 15000, polling: 200 });
+  try {
+    await page.waitForFunction(() => window.DBG && window.DBG.state().players.length > 0, { timeout: 45000, polling: 200 });
+  } catch (e) {
+    const err = await page.evaluate(() => document.querySelector('#homeError')?.textContent);
+    throw new Error(`${name} could not join room ${roomId}: ${err || (e as Error).message}`);
+  }
   await page.evaluate((n, r) => {
     const input = document.querySelector<HTMLInputElement>('#lobbyName')!;
     input.value = n;

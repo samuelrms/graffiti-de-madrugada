@@ -4,8 +4,8 @@ import express from 'express';
 import { Server } from 'socket.io';
 import { DEFAULTS } from "../game/config.js";
 import { createRoom } from "../game/room.js";
-/** Empty rooms are removed after this long. */
-const EMPTY_ROOM_TTL_MS = 60_000;
+/** Rooms created through the API but never joined are removed after this long. Occupied rooms die as soon as the last player leaves. */
+const UNUSED_ROOM_TTL_MS = 60_000;
 const MAX_ROOMS = 200;
 const ID_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'; // no look-alikes
 export function newRoomId(len = 6) {
@@ -22,7 +22,11 @@ export function createGame(opts = {}) {
     const cfg = { ...DEFAULTS, ...opts };
     const rooms = new Map();
     const current = new Map(); // socket.id -> room
+    const clientOf = new Map(); // socket.id -> browser token
+    const activeClients = new Set(); // browser tokens currently inside a room
+    const ipCount = new Map(); // ip -> players inside rooms
     const app = express();
+    app.set('trust proxy', true); // Render / Cloudflare tunnel put the client IP in X-Forwarded-For
     app.use(express.json({ limit: '4kb' }));
     app.get('/health', (_req, res) => { res.json({ ok: true, rooms: rooms.size }); });
     /** Public rooms only; locked rooms are reachable by id alone. */
@@ -60,8 +64,18 @@ export function createGame(opts = {}) {
         while (rooms.has(id))
             id = newRoomId();
         const room = createRoom(io, { id, name, locked }, cfg);
+        room.onEmpty = () => { room.destroy(); rooms.delete(id); };
+        room.onLeave = (socket) => { if (current.get(socket.id) === room) {
+            current.delete(socket.id);
+            release(socket);
+        } };
         rooms.set(id, room);
         return room;
+    }
+    function ipOf(socket) {
+        const fwd = socket.handshake.headers['x-forwarded-for'];
+        const first = Array.isArray(fwd) ? fwd[0] : fwd?.split(',')[0];
+        return (first?.trim() || socket.handshake.address || '').replace(/^::ffff:/, '');
     }
     /** Resolve by id (any room) or by name (public rooms only, case-insensitive). */
     function findRoom(key) {
@@ -72,12 +86,21 @@ export function createGame(opts = {}) {
         const lower = k.toLowerCase();
         return [...rooms.values()].find((r) => !r.locked && r.name.toLowerCase() === lower);
     }
+    function release(socket) {
+        const token = clientOf.get(socket.id);
+        if (token) {
+            activeClients.delete(token);
+            clientOf.delete(socket.id);
+        }
+        const ip = ipOf(socket);
+        const n = (ipCount.get(ip) ?? 1) - 1;
+        if (n <= 0)
+            ipCount.delete(ip);
+        else
+            ipCount.set(ip, n);
+    }
     function leaveCurrent(socket) {
-        const room = current.get(socket.id);
-        if (!room)
-            return;
-        room.leave(socket);
-        current.delete(socket.id);
+        current.get(socket.id)?.leave(socket); // room.onLeave cleans the registry maps
     }
     io.on('connection', (socket) => {
         socket.on('join', (req) => {
@@ -92,19 +115,34 @@ export function createGame(opts = {}) {
                 return;
             }
             leaveCurrent(socket);
+            // One player per browser (token) and, by default, one per IP.
+            const token = typeof req.client === 'string' ? req.client.slice(0, 64) : '';
+            if (token && activeClients.has(token)) {
+                socket.emit('joinError', { reason: 'duplicate' });
+                return;
+            }
+            const ip = ipOf(socket);
+            if (cfg.maxPerIp > 0 && (ipCount.get(ip) ?? 0) >= cfg.maxPerIp) {
+                socket.emit('joinError', { reason: 'ip-limit' });
+                return;
+            }
             if (!room.join(socket, typeof req.name === 'string' ? req.name : undefined)) {
                 socket.emit('joinError', { reason: 'full' });
                 return;
             }
             current.set(socket.id, room);
-            socket.once('leave', () => current.delete(socket.id));
+            if (token) {
+                activeClients.add(token);
+                clientOf.set(socket.id, token);
+            }
+            ipCount.set(ip, (ipCount.get(ip) ?? 0) + 1);
         });
         socket.on('disconnect', () => leaveCurrent(socket));
     });
     const timer = setInterval(() => {
         const now = Date.now();
         for (const [id, room] of rooms) {
-            if (room.size === 0 && now - room.emptySince > EMPTY_ROOM_TTL_MS) {
+            if (room.size === 0 && now - room.emptySince > UNUSED_ROOM_TTL_MS) {
                 room.destroy();
                 rooms.delete(id);
                 continue;

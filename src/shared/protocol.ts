@@ -17,6 +17,8 @@ export interface PlayerSnapshot {
   name: string;
   color: string;
   cls: number;
+  /** team index (0..teams-1) in teams mode, -1 in free-for-all */
+  team: number;
   ready: boolean;
   deaths: number;
   x: number;
@@ -43,7 +45,7 @@ export interface PlayerSnapshot {
   powerReadyIn: number;
 }
 
-export interface Winner { name: string; color: string; score: number }
+export interface Winner { name: string; color: string; score: number; team?: number }
 
 export interface StateSnapshot {
   phase: Phase;
@@ -56,6 +58,12 @@ export interface StateSnapshot {
 
 export interface PickupInfo { id: number; type: PickupType; x: number; y: number; z: number }
 
+export type GameMode = 'ffa' | 'teams';
+/** Fixed palette for up to 4 teams. */
+export const TEAM_COLORS = ['#ff2d75', '#00e5ff', '#b4ff39', '#ffb300'];
+export const TEAM_NAMES = ['Rosa', 'Ciano', 'Lima', 'Âmbar'];
+export const MAX_TEAMS = 4;
+
 export interface RoomInfo {
   id: string;
   name: string;
@@ -63,9 +71,16 @@ export interface RoomInfo {
   players: number;
   maxPlayers: number;
   phase: Phase;
+  mode: GameMode;
+  /** number of teams when mode === 'teams' (2–4) */
+  teams: number;
+  /** socket id of the current owner ('' while empty) */
+  ownerId: string;
 }
-export interface JoinRequest { room: string; name?: string }
-export type JoinError = 'not-found' | 'full' | 'invalid';
+/** `client` is a per-browser token so one person cannot play from several tabs. */
+export interface JoinRequest { room: string; name?: string; client?: string }
+export type JoinError = 'not-found' | 'full' | 'invalid' | 'duplicate' | 'ip-limit';
+export interface ModeRequest { mode: GameMode; teams?: number }
 
 export interface Welcome {
   room: RoomInfo;
@@ -99,6 +114,8 @@ export interface ServerToClient {
   welcome: (w: Welcome) => void;
   joinError: (e: { reason: JoinError }) => void;
   roomInfo: (r: RoomInfo) => void;
+  /** the owner closed the room (or it was destroyed); clients go back home */
+  roomClosed: () => void;
   state: (s: StateSnapshot) => void;
   reset: () => void;
   respawned: (e: RespawnedEvent) => void;
@@ -116,6 +133,10 @@ export interface ServerToClient {
 export interface ClientToServer {
   join: (req: JoinRequest) => void;
   leave: () => void;
+  /** owner only, lobby only */
+  setMode: (m: ModeRequest) => void;
+  /** owner only */
+  closeRoom: () => void;
   pos: (p: PosUpdate) => void;
   paint: (tileKey: string) => void;
   shoot: (s: ShootRequest) => void;

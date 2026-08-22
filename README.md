@@ -15,7 +15,8 @@ vence quem tiver mais pontos.
 
 | | |
 | --- | --- |
-| ![Home](docs/img/home.jpg) Home: salas abertas, criar sala (trancada ou não), entrar por ID ou nome | ![Lobby](docs/img/lobby.jpg) Lobby da sala: nome, link para compartilhar e "Pronto!" de todos |
+| ![Home](docs/img/home.jpg) Home: salas abertas, criar sala (trancada ou não), entrar por ID ou nome | ![Lobby](docs/img/lobby.jpg) Lobby da sala: nome, link, dono escolhe o modo, "Pronto!" de todos |
+| ![Equipes](docs/img/equipes.jpg) Modo equipes: 2 a 4 times balanceados, cor por equipe, sem fogo amigo | ![Cidade](docs/img/cidade.jpg) Cidade procedural: casas, lojas e torres para escalar |
 | ![Pichando](docs/img/pichando.jpg) Spray na parede — tiles valem mais quanto mais alto | ![Escalando](docs/img/escalando.jpg) Segurar Espaço na parede = escalar |
 | ![Telhado](docs/img/telhado.jpg) Bazuca de tinta espera no topo das torres | ![Combate](docs/img/combate.jpg) Pistola, bazuca, soco e poderes |
 | ![Kill feed](docs/img/kill.jpg) Kill feed com nomes e ranking ao vivo | ![Controles de toque](docs/img/toque.jpg) Celular: joystick, arrastar para olhar, botões |
@@ -58,7 +59,21 @@ pnpm start      # roda o build
 - Cada sala é uma partida isolada com ID de 6 caracteres (`#r=abc123` na URL).
 - Salas públicas aparecem na home (atualiza a cada 3 s) e podem ser acessadas pelo
   nome; salas **trancadas** só pelo ID/link e nunca aparecem na lista.
-- Sala vazia some depois de 1 minuto. Até 12 jogadores por sala.
+- **Dono**: quem entra primeiro. Escolhe o modo no lobby e pode **fechar a sala**
+  (todos voltam para a home). Se sair ou fechar a aba, o dono passa para quem está
+  há mais tempo na sala. Quando o último sai, a sala é destruída na hora (sala
+  criada e nunca usada some em 1 min). Até 12 jogadores por sala.
+- **Um jogador por navegador**: abrir o jogo em outra aba não cria outro
+  personagem (token por navegador). Por padrão também **um jogador por IP**
+  (`MAX_PER_IP=1`); para eventos em que todo mundo divide o mesmo Wi-Fi/NAT,
+  suba o valor (`MAX_PER_IP=0` = sem limite) no `compose.yaml`/Render.
+
+### Modos
+
+| Modo | Regras |
+| --- | --- |
+| Todos contra todos (padrão) | Cada um por si; tiles e kills contam para o jogador |
+| Equipes (2, 3 ou 4) | Jogadores distribuídos em rodízio pela ordem de entrada (diferença máxima de 1 por time); cor e spray da equipe; sem fogo amigo; pichar tile do próprio time não pontua; vence a equipe com mais pontos somados |
 
 | Item | Valor |
 | --- | --- |
@@ -128,10 +143,10 @@ flowchart TD
     subgraph Docker["docker compose / Render"]
         subgraph Srv["server (Node 22, porta 8080)"]
             HTTP["http/server.ts<br/>/health · /api/rooms · estáticos de dist/public"]
-            REG[("Registro de salas<br/>id · nome · trancada · TTL 60 s vazia")]
+            REG[("Registro de salas<br/>id · nome · trancada · dono<br/>destruída ao esvaziar")]
             subgraph RoomN["game/room.ts — uma por sala"]
                 IO[Socket.IO room id]
-                ST[("players · paint Map<br/>pickups · phase")]
+                ST[("players · equipes · paint Map<br/>pickups · phase")]
                 T["tick() 20 Hz"]
             end
             SH2["shared/city.ts<br/>(mesma seed)"]
@@ -141,7 +156,7 @@ flowchart TD
 
     SC <-->|WebSocket via HTTPS| TUN
     TUN <-->|http://game:8080| HTTP
-    HTTP -->|"join: id (qualquer sala) ou nome (só públicas)"| REG
+    HTTP -->|"join: id (qualquer sala) ou nome (só públicas)<br/>1 por navegador (token) · MAX_PER_IP"| REG
     REG --> IO
     IO -->|"pos: clamp + validação<br/>velocidade · sem voar · sem atravessar<br/>inválido → correct()"| ST
     IO -->|"paint: tile existe? dist ≤ 4,5?<br/>cooldown? → score ± valor(altura)"| ST
@@ -231,8 +246,8 @@ render.yaml          blueprint Render: web service Docker free, health check /he
 | --- | --- | --- |
 | Tipos + lint | `pnpm typecheck` · `pnpm lint` | `tsc --noEmit` nos três alvos; ESLint com typescript-eslint |
 | Unitário | `pnpm test` | `shared/city.ts`: determinismo, prédios sem sobreposição e dentro do mapa, spawns fora de prédios, tiles/chaves, valor por altura |
-| Integração | `pnpm test` | servidor via socket.io-client: salas (criar, listar só públicas, entrar por ID/nome, trancada só por ID, isolamento, saída, IDs sem caracteres ambíguos), lobby/ready, 13º rejeitado, pintura (alcance, cooldown, roubo), tiros/kill/respawn, bloqueio por prédio, soco, colete/kit, bazuca, escudo, fim/restart, clamp e validação de movimento |
-| E2E | `pnpm test:e2e` | dois Chromes headless: home → cria sala trancada (não listada) → entra pelo link → lobby → andar (sem correções do servidor) → pichar pela mira → escalar → matar → kill feed → respawn |
+| Integração | `pnpm test` | servidor via socket.io-client: salas (criar, listar só públicas, entrar por ID/nome, trancada só por ID, isolamento, destruição ao esvaziar, IDs sem caracteres ambíguos), um por navegador e por IP, dono (passagem, modo, fechar), equipes (balanceamento, cores, sem fogo amigo, vencedor por equipe), lobby/ready, 13º rejeitado, pintura (alcance, cooldown, roubo), tiros/kill/respawn, bloqueio por prédio, soco, colete/kit, bazuca, escudo, fim/restart, clamp e validação de movimento |
+| E2E | `pnpm test:e2e` | dois Chromes headless: home → cria sala trancada (não listada) → entra pelo link → segunda aba recusada → dono troca para equipes e volta → andar (sem correções do servidor) → pichar pela mira → escalar → matar → kill feed → respawn → dono sai e passa a sala → último sai e a sala some |
 
 GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) em todo
 push/PR na `main`: typecheck + lint + testes → e2e → `docker compose up --build`,
