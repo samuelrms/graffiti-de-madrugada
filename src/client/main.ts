@@ -40,7 +40,7 @@ function frame(now: number): void {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
   if (net.cfg) {
-    updateCamera();
+    if (!flags.freeCam) updateCamera();
     if (player.tool === 'spray' && net.state.phase === 'playing' && !player.dead && !player.stunned) tryPaint(now);
     else $('#cross').classList.remove('can');
   }

@@ -16,7 +16,7 @@ vence quem tiver mais pontos.
 | | |
 | --- | --- |
 | ![Home](docs/img/home.jpg) Home: salas abertas, criar sala (trancada ou não), entrar por ID ou nome | ![Lobby](docs/img/lobby.jpg) Lobby da sala: nome, link, dono escolhe o modo, "Pronto!" de todos |
-| ![Equipes](docs/img/equipes.jpg) Modo equipes: 2 a 4 times balanceados, cor por equipe, sem fogo amigo | ![Personagens](docs/img/personagens.jpg) 12 personagens procedurais com cel-shading e contorno |
+| ![Equipes](docs/img/equipes.jpg) Modo equipes: 2 a 4 times balanceados, cor por equipe, sem fogo amigo | ![Cidade](docs/img/cidade.jpg) Cidade procedural: casas, lojas e torres para escalar |
 | ![Pichando](docs/img/pichando.jpg) Spray na parede — tiles valem mais quanto mais alto | ![Escalando](docs/img/escalando.jpg) Segurar Espaço na parede = escalar |
 | ![Telhado](docs/img/telhado.jpg) Bazuca de tinta espera no topo das torres | ![Combate](docs/img/combate.jpg) Pistola, bazuca, soco e poderes |
 | ![Kill feed](docs/img/kill.jpg) Kill feed com nomes e ranking ao vivo | ![Controles de toque](docs/img/toque.jpg) Celular: joystick, arrastar para olhar, botões |
@@ -99,6 +99,16 @@ pnpm start      # roda o build
 No celular/tablet: joystick virtual na metade esquerda (empurrar até a borda =
 correr), arrastar na metade direita para olhar, e botões usar, pular/escalar,
 soco, Q e trocar ferramenta.
+
+### Personagens
+
+![Os 12 personagens](docs/img/personagens.jpg)
+
+Doze visuais procedurais (boné, gorro, moicano, capuz, bucket, afro, rabo de
+cavalo, capacete, fone, bandana, robô…), cada um com rosto, tênis, jaqueta e
+cabelo próprios. Corpo articulado (quadril, joelho, ombro, cotovelo) com
+animação de corrida, sprint, escalada, pulo, pintura e respiração parada.
+Cel-shading de 3 tons com contorno. Nada é baixado: tudo é gerado em código.
 
 ### Classes e poderes
 
