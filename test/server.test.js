@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { io } = require('socket.io-client');
-const { createGame, WEAPONS } = require('../server');
+const { createGame, WEAPONS, movementViolation } = require('../server');
 const C = require('../shared/city');
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -32,7 +32,7 @@ const placeNextToWall = (c, bi, face, extra = {}) => {
 };
 
 async function setup(t, opts = {}) {
-  const game = createGame({ port: 0, quiet: true, countdownSeconds: 0.2, ...opts });
+  const game = createGame({ port: 0, quiet: true, countdownSeconds: 0.2, validateMovement: false, ...opts });
   await wait(50);
   const clients = [];
   t.after(async () => { clients.forEach((c) => c.socket.close()); await game.close(); });
@@ -286,11 +286,46 @@ test('position updates are clamped to the map and ignore garbage', async (t) => 
   a.socket.emit('pos', { x: -50, y: 500, z: 9999, rot: 1, anim: 'x'.repeat(50) });
   await wait(80);
   assert.equal(me(a).x, 0);
-  assert.equal(me(a).y, 80);
+  assert.equal(me(a).y, 60);
   assert.equal(me(a).z, C.MAP_SIZE);
   assert.equal(me(a).anim.length, 8);
   a.socket.emit('pos', { x: 'nope' });
   a.socket.emit('pos', null);
   await wait(80);
   assert.equal(me(a).x, 0);
+});
+
+test('movement validation: speed cap, clipping and flying are rejected', () => {
+  const me = { x: 100, y: 0, z: 100 };
+  const now = 10000;
+  assert.equal(movementViolation(city, me, 101, 0, 100, 0.05, now), null, 'normal walk');
+  assert.equal(movementViolation(city, me, 130, 0, 100, 0.05, now), 'speed', 'teleport');
+  assert.equal(movementViolation(city, me, 100, 5, 100, 0.05, now), 'vspeed', 'rocket jump');
+  const b = city[0];
+  assert.equal(movementViolation(city, { x: b.x, y: 0, z: b.z }, b.x, 0, b.z, 0.05, now), 'clip', 'inside building');
+  assert.equal(movementViolation(city, { x: b.x, y: b.h, z: b.z }, b.x, b.h, b.z, 0.05, now), null, 'standing on roof');
+  assert.equal(movementViolation(city, { x: 100, y: 20, z: 100 }, 100, 20, 100, 0.05, now), 'fly', 'hovering over a street');
+  assert.equal(movementViolation(city, { x: 100, y: 20, z: 100 }, 101, 19, 100, 0.05, now), null, 'falling over a street');
+  const wall = { x: b.x - b.w / 2 - 0.5, y: 10, z: b.z };
+  assert.equal(movementViolation(city, wall, wall.x, Math.min(10, b.h - 1), wall.z, 0.05, now), null, 'climbing a wall');
+  assert.equal(movementViolation(city, { x: 100, y: 0, z: 100, freeMoveUntil: now + 100 }, 130, 0, 100, 0.05, now), null, 'knockback window');
+});
+
+test('server snaps a cheating client back and keeps the last valid position', async (t) => {
+  const { game, add } = await setup(t, { validateMovement: true });
+  const a = await add();
+  await add();
+  await until(() => game.phase === 'playing');
+  const sp = C.spawnPoints()[0];
+  const corrections = [];
+  a.socket.on('correct', (d) => corrections.push(d));
+  await wait(1600); // respawn grace window
+  a.socket.emit('pos', { x: sp.x + 1, y: 0, z: sp.z, rot: 0, anim: 'run' });
+  await wait(60);
+  a.socket.emit('pos', { x: sp.x + 80, y: 0, z: sp.z, rot: 0, anim: 'run' });
+  await until(() => corrections.length === 1);
+  assert.equal(corrections[0].reason, 'speed');
+  assert.equal(corrections[0].x, sp.x + 1);
+  await wait(60);
+  assert.equal(me(a).x, sp.x + 1);
 });

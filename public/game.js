@@ -3,6 +3,7 @@ import * as THREE from 'three';
 const C = window.CITY;
 const socket = io();
 const $ = (s) => document.querySelector(s);
+const dbgFlags = { render: true, sim: true }; // toggled by tools/ (screenshots, e2e)
 
 // ---------- Net state ----------
 let me = null; // my id
@@ -127,9 +128,9 @@ const lampMat = new THREE.MeshStandardMaterial({ color: 0x444455 });
 const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffd27a });
 C.spawnPoints().forEach((s) => {
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 6), lampMat);
-  pole.position.set(s.x + 3.5, 3, s.z - 3.5); scene.add(pole);
+  pole.position.set(s.x - 4.5, 3, s.z + 4.5); scene.add(pole);
   const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.35), bulbMat);
-  bulb.position.set(s.x + 3.5, 6, s.z - 3.5); scene.add(bulb);
+  bulb.position.set(s.x - 4.5, 6, s.z + 4.5); scene.add(bulb);
   const light = new THREE.PointLight(0xffc878, 30, 26, 1.6);
   light.position.copy(bulb.position); scene.add(light);
 });
@@ -322,6 +323,7 @@ const player = {
 let myChar = null;
 const keys = new Set();
 let mouseDown = false;
+const touch = { active: false, x: 0, y: 0 };
 let lastPaintAt = 0, lastPosSent = 0, dashUntil = 0, superJump = false;
 const R = 0.45, H = 1.75;
 const WALK = 7, SHOES = 10.5, DASH = 17;
@@ -346,6 +348,7 @@ function physics(dt) {
 
   let ix = (keys.has('d') ? 1 : 0) - (keys.has('a') ? 1 : 0);
   let iz = (keys.has('s') ? 1 : 0) - (keys.has('w') ? 1 : 0);
+  if (touch.active) { ix = touch.x; iz = touch.y; }
   if (!canMove) ix = iz = 0;
   const len = Math.hypot(ix, iz) || 1;
   ix /= len; iz /= len;
@@ -479,6 +482,7 @@ function burst(pos, color, size = 1) {
   effects.push({ obj: m, until: performance.now() + 250, grow: true });
 }
 function updateEffects(now) {
+  if (!dbgFlags.sim) return; // frozen for screenshots
   for (let i = effects.length - 1; i >= 0; i--) {
     const e = effects[i];
     if (now > e.until) { scene.remove(e.obj); effects.splice(i, 1); continue; }
@@ -493,7 +497,8 @@ function toast(text, color = '#fff') {
 
 // ---------- Input ----------
 const canvas = renderer.domElement;
-canvas.addEventListener('click', () => { if (document.pointerLockElement !== canvas) canvas.requestPointerLock(); });
+const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+canvas.addEventListener('click', () => { if (!isTouch && document.pointerLockElement !== canvas) canvas.requestPointerLock(); });
 addEventListener('mousemove', (e) => {
   if (document.pointerLockElement !== canvas) return;
   player.yaw -= e.movementX * 0.0025;
@@ -541,6 +546,57 @@ for (const sel of ['#name', '#lobbyName']) {
   $(sel).addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
 }
 
+// ---------- Touch controls (phones/tablets) ----------
+if (isTouch) {
+  document.body.classList.add('touch');
+  const stick = $('#stick'), knob = $('#stick i');
+  let stickId = null, lookId = null, lookLast = null;
+  const stickCenter = () => { const r = stick.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, r: r.width / 2 }; };
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse') return;
+    if (e.clientX < innerWidth / 2 && stickId === null) {
+      stickId = e.pointerId;
+      const c = stickCenter();
+      stick.style.left = `${e.clientX - c.r}px`; stick.style.top = `${e.clientY - c.r}px`; stick.style.bottom = 'auto';
+      touch.active = true;
+    } else if (lookId === null) {
+      lookId = e.pointerId; lookLast = { x: e.clientX, y: e.clientY };
+    }
+  });
+  addEventListener('pointermove', (e) => {
+    if (e.pointerId === stickId) {
+      const c = stickCenter();
+      let dx = (e.clientX - c.x) / c.r, dy = (e.clientY - c.y) / c.r;
+      const len = Math.hypot(dx, dy);
+      if (len > 1) { dx /= len; dy /= len; }
+      touch.x = Math.abs(dx) < 0.15 ? 0 : dx;
+      touch.y = Math.abs(dy) < 0.15 ? 0 : dy;
+      knob.style.transform = `translate(${dx * c.r * 0.6}px, ${dy * c.r * 0.6}px)`;
+    } else if (e.pointerId === lookId && lookLast) {
+      player.yaw -= (e.clientX - lookLast.x) * 0.006;
+      player.pitch = Math.max(-0.6, Math.min(1.25, player.pitch + (e.clientY - lookLast.y) * 0.006));
+      lookLast = { x: e.clientX, y: e.clientY };
+    }
+  });
+  const end = (e) => {
+    if (e.pointerId === stickId) { stickId = null; touch.active = false; touch.x = touch.y = 0; knob.style.transform = ''; stick.style.left = '40px'; stick.style.top = 'auto'; stick.style.bottom = '110px'; }
+    if (e.pointerId === lookId) { lookId = null; lookLast = null; }
+  };
+  addEventListener('pointerup', end); addEventListener('pointercancel', end);
+  const hold = (btn, down, up) => {
+    btn.addEventListener('pointerdown', (e) => { e.preventDefault(); btn.setPointerCapture(e.pointerId); down(); });
+    const rel = (e) => { e.preventDefault(); up && up(); };
+    btn.addEventListener('pointerup', rel); btn.addEventListener('pointercancel', rel);
+  };
+  const B = (t) => document.querySelector(`#tbtns [data-t="${t}"]`);
+  hold(B('jump'), () => keys.add(' '), () => keys.delete(' '));
+  hold(B('fire'), () => { mouseDown = true; if (player.tool === 'gun' && state.phase === 'playing' && !player.dead && !player.stunned) shoot(); }, () => { mouseDown = false; });
+  hold(B('melee'), () => socket.emit('melee'));
+  hold(B('power'), () => socket.emit('power'));
+  hold(B('swap'), () => { setTool(player.tool === 'spray' ? 'gun' : 'spray'); B('fire').textContent = player.tool === 'spray' ? '🎨' : '🔫'; });
+  // Holding the fire button while aiming at a wall keeps painting (tryPaint polls mouseDown).
+}
+
 // ---------- Socket ----------
 socket.on('welcome', (w) => {
   cfg = w; me = w.id; mySlot = w.slot;
@@ -554,6 +610,7 @@ socket.on('full', () => { $('#ovTitle').textContent = 'Muro lotado'; $('#ovText'
 socket.on('disconnect', () => { $('#overlay').classList.remove('hidden'); $('#ovTitle').textContent = 'Desconectado'; $('#ovText').textContent = 'Recarregue a página.'; });
 socket.on('reset', () => { clearPaint(); iAmReady = false; $('#ready').classList.remove('on'); $('#ready').textContent = 'Pronto!'; const s = C.spawnPoints()[mySlot % 12]; spawnLocal(s.x, 0, s.z); });
 socket.on('respawned', (d) => { if (d.id === me) spawnLocal(d.x, d.y, d.z); });
+socket.on('correct', (d) => { player.x = d.x; player.y = d.y; player.z = d.z; player.vy = 0; });
 socket.on('painted', (d) => {
   setPaint(d.key, d.color);
   if (d.by === me) { const t = C.parseKey(d.key); const c = C.tileCenter(buildings[t.bi], t.face, t.i, t.j); burst(new THREE.Vector3(c.x, c.y, c.z), d.color, 0.4); }
@@ -655,12 +712,14 @@ function updateHud() {
 // ---------- Main loop ----------
 // Simulation runs on a timer (keeps working in background tabs); rendering on rAF.
 let lastSim = performance.now();
+let acc = 0;
 const STEP = 1 / 60;
 setInterval(() => {
   const now = performance.now();
-  let acc = Math.min((now - lastSim) / 1000, 2); // catch up to 2s when throttled
+  acc = Math.min(acc + (now - lastSim) / 1000, 2); // keep the remainder; catch up to 2s when throttled
   lastSim = now;
   if (!cfg) return;
+  if (!dbgFlags.sim) { acc = 0; return; }
   while (acc >= STEP) { physics(STEP); acc -= STEP; }
   if (now - lastPosSent > 50) {
     lastPosSent = now;
@@ -670,6 +729,7 @@ setInterval(() => {
 
 let last = performance.now();
 function frame(now) {
+  if (!dbgFlags.render) { requestAnimationFrame(frame); return; }
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
   if (cfg) {
@@ -719,4 +779,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // Debug handle (harmless in production)
-window.DBG = { player, camera, scene, remote, state: () => state, buildings, keys, socket, setTool, buildCharacter, THREE };
+window.DBG = { player, camera, scene, remote, state: () => state, buildings, keys, socket, setTool, buildCharacter, THREE, flags: dbgFlags, press: (on) => { mouseDown = on; }, aimWallTile };

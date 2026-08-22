@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Unit + integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  e2e:
+    name: End-to-end (headless Chrome)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Locate Chrome
+        run: echo "CHROME_PATH=$(which google-chrome || which chromium-browser || which chromium)" >> "$GITHUB_ENV"
+      - run: npm run test:e2e
+
+  stack:
+    name: Bring the stack up (docker compose + tunnel)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker compose up --build
+        run: docker compose up --build -d
+      - name: Wait for the game to be healthy
+        run: |
+          for i in $(seq 1 30); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' "$(docker compose ps -q game)")
+            echo "game: $status"
+            [ "$status" = healthy ] && exit 0
+            sleep 2
+          done
+          docker compose logs game
+          exit 1
+      - name: Smoke test the running stack
+        run: |
+          docker compose exec -T game node -e "fetch('http://localhost:8080/health').then(r => r.json()).then(j => { console.log(j); if (!j.ok) process.exit(1); })"
+          docker compose exec -T game node -e "fetch('http://localhost:8080/vendor/three/three.module.js').then(r => process.exit(r.ok ? 0 : 1))"
+      - name: Wait for the public tunnel URL
+        run: |
+          for i in $(seq 1 45); do
+            url=$(docker compose logs tunnel 2>/dev/null | grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' | head -n 1 || true)
+            if [ -n "$url" ]; then
+              echo "URL PÚBLICA: $url"
+              echo "### 🌃 Stack no ar" >> "$GITHUB_STEP_SUMMARY"
+              echo "URL pública temporária gerada pelo túnel: $url" >> "$GITHUB_STEP_SUMMARY"
+              curl -sf --max-time 20 "$url/health" && exit 0
+              echo "túnel ainda não responde, tentando de novo..."
+            fi
+            sleep 2
+          done
+          docker compose logs tunnel
+          exit 1
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

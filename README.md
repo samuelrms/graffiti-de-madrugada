@@ -6,6 +6,18 @@ Jogo multiplayer 3D competitivo no navegador, feito para o Hackathon de Jogos
 libera equipamentos melhores, e armas de tinta, socos e poderes derrubam rivais.
 Quando o sol nasce, vence quem tiver mais pontos.
 
+![Cidade vista da rua](docs/img/cidade.jpg)
+
+| | |
+| --- | --- |
+| ![Lobby](docs/img/lobby.jpg) Lobby: nomes e "Pronto!" de todos | ![Pichando](docs/img/pichando.jpg) Spray na parede — tiles valem mais quanto mais alto |
+| ![Escalando](docs/img/escalando.jpg) Segurar Espaço na parede = escalar | ![Telhado](docs/img/telhado.jpg) Bazuca de tinta espera no topo das torres |
+| ![Combate](docs/img/combate.jpg) Pistola, bazuca, soco e poderes | ![Kill feed](docs/img/kill.jpg) Kill feed com nomes e ranking ao vivo |
+
+![Controles de toque](docs/img/toque.jpg)
+
+Prints gerados automaticamente por `npm run screenshots` (Chrome headless jogando de verdade).
+
 ## Como rodar
 
 Só precisa de Docker com Docker Compose.
@@ -18,7 +30,9 @@ Aguarde a caixa **URL PÚBLICA DO JOGO** no terminal (serviço `tunnel`). Essa U
 `https://*.trycloudflare.com` é o único endereço dos jogadores — não há porta
 exposta na máquina. Se rodou com `-d`: `docker compose logs -f tunnel`.
 
-Testes (sem Docker): `npm install && npm test`.
+Testes (sem Docker): `npm install && npm test` (unitário + integração) e
+`npm run test:e2e` (dois Chromes headless jogando uma rodada — precisa de Chrome
+instalado; `CHROME_PATH` se não estiver no caminho padrão).
 
 ## Como jogar
 
@@ -46,6 +60,9 @@ Testes (sem Docker): `npm install && npm test`.
 | `1` / `2` / roda do mouse | Alternar spray ↔ arma |
 | `F` | Soco: 25 de dano + atordoa 0,9 s quem estiver na frente |
 | `Q` | Poder da sua classe (ver abaixo) |
+
+No celular/tablet: joystick virtual na metade esquerda da tela, arrastar na metade
+direita para olhar, e botões 🎨/🔫 (usar), ⤒ (pular/escalar), 👊, Q e 1/2.
 
 ### Classes e poderes
 
@@ -99,7 +116,7 @@ flowchart TD
     TUN <-->|http://game:8080| IO
     H -.->|healthcheck| TUN
 
-    IO -->|pos: clamp ao mapa| ST
+    IO -->|"pos: clamp ao mapa + validação<br/>velocidade · sem voar · sem atravessar<br/>inválido → correct() snap no cliente"| ST
     IO -->|"paint: tile existe? dist ≤ 4,5?<br/>cooldown? → score ± valor(altura)"| ST
     IO -->|"shoot: raycast vs prédios + jogadores<br/>splash se bazuca → damage()"| ST
     IO -->|"melee: alcance 2,6 + em frente → stun + dano"| ST
@@ -121,9 +138,25 @@ flowchart TD
 
 Divisão de autoridade: o **servidor** decide tudo que pontua ou fere (pintura,
 tiros, socos, pickups, vida, fases). O **cliente** simula o próprio movimento
-(gravidade, colisão, escalada) e só reporta posição — rápido o bastante para um
-hackathon e sem precisar replicar física no servidor. A cidade é gerada pela mesma
-seed nos dois lados, então o servidor valida qualquer tile que o cliente pedir.
+(gravidade, colisão, escalada) e reporta posição; o servidor checa cada posição
+contra limites físicos — velocidade máxima (com folga para lag e empurrões),
+nada de atravessar prédio, nada de pairar acima de 7 m sem parede ou telhado por
+perto (cair é sempre permitido) — e, se não bate, mantém a última posição válida
+e manda o cliente voltar (`correct`). A cidade é gerada pela mesma seed nos dois
+lados, então o servidor valida qualquer tile que o cliente pedir.
+
+## Testes e CI
+
+| Camada | Comando | O que cobre |
+| --- | --- | --- |
+| Unitário | `npm test` | `shared/city.js`: determinismo, prédios sem sobreposição e dentro do mapa, spawns fora de prédios, tiles/chaves, valor por altura |
+| Integração | `npm test` | servidor via socket.io-client: lobby/ready, 13º rejeitado, pintura (alcance, cooldown, roubo), tiros/kill/respawn, bloqueio por prédio, soco, colete/kit, bazuca, escudo, fim/restart, clamp e validação de movimento |
+| E2E | `npm run test:e2e` | dois Chromes headless: lobby → andar (sem correções do servidor) → pichar pela mira → escalar → matar → kill feed → respawn |
+
+GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) roda em
+todo push/PR na `main`: testes → e2e → sobe a stack com `docker compose up --build`,
+espera o `game` ficar healthy, bate em `/health`, espera o túnel imprimir a URL
+pública e confere que ela responde de fora. A URL fica no resumo do job.
 
 ## Estrutura
 
@@ -132,7 +165,9 @@ server.js          regras, combate, fases, Socket.IO, /health — exporta create
 shared/city.js     gerador determinístico da cidade, spawns, pickups, tiles de parede
 public/index.html  HUD, lobby, overlays
 public/game.js     Three.js: cidade, personagens, câmera, física, escalada, efeitos
-test/              node:test — unitário (cidade) e integração (servidor via socket.io-client)
+test/              node:test — unitário (cidade), integração (socket.io-client) e e2e (Chrome)
+tools/             harness puppeteer-core: gera os prints do README e apoia o e2e
+.github/workflows  CI: testes, e2e e stack Docker com túnel em todo push na main
 Dockerfile         node:22-alpine
 compose.yaml       game + tunnel (Cloudflare Quick Tunnel)
 tunnel/            imagem do cloudflared que imprime a URL pública
@@ -148,5 +183,5 @@ nenhum asset externo, nenhuma licença de terceiros.
 
 ## Fora do escopo
 
-Login, ranking persistente, áudio, controles de toque, física no servidor,
-anti-cheat de movimento.
+Login, ranking persistente, áudio, física completa no servidor (o servidor valida
+plausibilidade, não simula).

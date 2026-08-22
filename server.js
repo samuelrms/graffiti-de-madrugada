@@ -12,6 +12,7 @@ const DEFAULTS = {
   respawnMs: 3000,
   minPlayers: 2,
   maxPlayers: 12,
+  validateMovement: true,
   quiet: false
 };
 
@@ -53,6 +54,33 @@ const COLORS = [
   '#2dff9b', '#ff4dff', '#4d7cff', '#ffe600', '#ff3b3b', '#7dffea'
 ];
 
+const MAX_Y = 60;
+const MAX_SPEED = 22; // dash is 17; leave headroom for lag + push knockback
+const SPEED_SLACK = 2.5; // units per update tolerated beyond speed * dt
+
+// Buildings whose footprint (expanded by `pad`) contains (x, z).
+function buildingsAt(buildings, x, z, pad) {
+  return buildings.filter((b) => Math.abs(x - b.x) < b.w / 2 + pad && Math.abs(z - b.z) < b.d / 2 + pad);
+}
+
+// Returns a reason string when a reported position is not physically plausible.
+function movementViolation(buildings, me, x, y, z, dt, now) {
+  // Knockback / respawn windows get a free pass on speed.
+  if (now > (me.freeMoveUntil || 0)) {
+    const dist = Math.hypot(x - me.x, z - me.z);
+    if (dist > MAX_SPEED * dt + SPEED_SLACK) return 'speed';
+    if (y - me.y > 12 * dt + 2.5) return 'vspeed';
+  }
+  // Inside a solid building (below its roof)?
+  for (const b of buildingsAt(buildings, x, z, -0.2)) if (y < b.h - 0.3) return 'clip';
+  // High up without anything to stand on or climb? (falling is always allowed)
+  if (y > 7 && y >= me.y - 0.01) {
+    const near = buildingsAt(buildings, x, z, 1.3);
+    if (!near.some((b) => y <= b.h + 0.5)) return 'fly';
+  }
+  return null;
+}
+
 function createGame(opts = {}) {
   const cfg = { ...DEFAULTS, ...opts };
   const buildings = CITY.generateCity();
@@ -86,6 +114,8 @@ function createGame(opts = {}) {
     p.doubleUntil = 0;
     p.shieldUntil = 0;
     p.smokeUntil = 0;
+    p.freeMoveUntil = Date.now() + 1500;
+    p.lastPosAt = 0;
     io.emit('respawned', { id: p.id, x: p.x, y: p.y, z: p.z });
   }
 
@@ -221,8 +251,11 @@ function createGame(opts = {}) {
   app.use('/vendor/three', express.static(path.join(__dirname, 'node_modules/three/build')));
   app.get('/health', (_req, res) => res.json({ ok: true }));
 
+  let resolveReady;
+  const ready = new Promise((r) => { resolveReady = r; });
   const httpServer = app.listen(cfg.port, '0.0.0.0', () => {
     if (!cfg.quiet) console.log(`Graffiti de Madrugada 3D em http://localhost:${httpServer.address().port}`);
+    resolveReady();
   });
   const io = new Server(httpServer);
 
@@ -240,14 +273,25 @@ function createGame(opts = {}) {
       colors: COLORS
     });
 
+    // Client-side physics, server-side sanity: speed cap, no flying, no clipping.
     socket.on('pos', (d) => {
       const me = players.get(socket.id);
       if (!me || !d || me.dead) return;
       const x = Number(d.x), y = Number(d.y), z = Number(d.z), rot = Number(d.rot);
       if (![x, y, z, rot].every(Number.isFinite)) return;
-      me.x = Math.max(0, Math.min(CITY.MAP_SIZE, x));
-      me.y = Math.max(0, Math.min(80, y));
-      me.z = Math.max(0, Math.min(CITY.MAP_SIZE, z));
+      const now = Date.now();
+      const nx = Math.max(0, Math.min(CITY.MAP_SIZE, x));
+      const ny = Math.max(0, Math.min(MAX_Y, y));
+      const nz = Math.max(0, Math.min(CITY.MAP_SIZE, z));
+      const dt = Math.min(1, (now - (me.lastPosAt || now)) / 1000);
+      me.lastPosAt = now;
+      const reason = cfg.validateMovement ? movementViolation(buildings, me, nx, ny, nz, dt, now) : null;
+      if (reason) {
+        me.violations = (me.violations || 0) + 1;
+        socket.emit('correct', { x: me.x, y: me.y, z: me.z, reason });
+        return;
+      }
+      me.x = nx; me.y = ny; me.z = nz;
       me.rot = rot;
       me.anim = typeof d.anim === 'string' ? d.anim.slice(0, 8) : 'idle';
     });
@@ -330,6 +374,7 @@ function createGame(opts = {}) {
         if (dist > MELEE_RANGE || Math.abs(dy) > 2) continue;
         if ((dx * fx + dz * fz) / (dist || 1) < 0.3) continue;
         o.stunUntil = now + STUN_MS;
+        o.freeMoveUntil = now + 600;
         damage(o, MELEE_DAMAGE, me, now);
         io.emit('hit', { by: me.id, victim: o.id, fx, fz });
       }
@@ -344,6 +389,7 @@ function createGame(opts = {}) {
       me.powerReadyAt = now + pw.cooldown;
       if (name === 'shield') me.shieldUntil = now + pw.duration;
       if (name === 'smoke') me.smokeUntil = now + pw.duration;
+      if (name === 'jump') me.freeMoveUntil = now + 1500;
       io.emit('power', { id: me.id, name, duration: pw.duration });
     });
 
@@ -369,6 +415,7 @@ function createGame(opts = {}) {
   return {
     httpServer,
     io,
+    ready,
     get port() { return httpServer.address().port; },
     get phase() { return phase; },
     close() {
@@ -379,6 +426,6 @@ function createGame(opts = {}) {
   };
 }
 
-module.exports = { createGame, DEFAULTS, WEAPONS, POWERS, PICKUP_TYPES, COLORS };
+module.exports = { createGame, DEFAULTS, WEAPONS, POWERS, PICKUP_TYPES, COLORS, movementViolation };
 
 if (require.main === module) createGame();
