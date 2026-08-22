@@ -162,7 +162,7 @@ GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) roda em
 todo push/PR na `main`: testes → e2e → sobe a stack com `docker compose up --build`,
 espera o `game` ficar healthy, bate em `/health`, espera o túnel imprimir a URL
 pública e confere que ela responde de fora. A URL fica no resumo do job. Em push
-na `main`, com tudo verde, o job `deploy` publica no Fly.io (ver abaixo).
+na `main`, com tudo verde, o job `deploy` publica no Render (ver abaixo).
 
 ## Deploy (Render, plano free)
 
