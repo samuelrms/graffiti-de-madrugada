@@ -112,6 +112,11 @@ flowchart TD
         TUN["tunnel (cloudflared)"]
     end
 
+    subgraph CI["GitHub Actions (push na main)"]
+        T1[npm test] --> T2[e2e Chrome] --> T3["compose up + túnel + /health"] --> DEP["fly deploy (gru)"]
+    end
+    DEP -.->|mesma imagem Docker| Game
+
     SC <-->|WebSocket via HTTPS| TUN
     TUN <-->|http://game:8080| IO
     H -.->|healthcheck| TUN
@@ -156,7 +161,35 @@ lados, então o servidor valida qualquer tile que o cliente pedir.
 GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) roda em
 todo push/PR na `main`: testes → e2e → sobe a stack com `docker compose up --build`,
 espera o `game` ficar healthy, bate em `/health`, espera o túnel imprimir a URL
-pública e confere que ela responde de fora. A URL fica no resumo do job.
+pública e confere que ela responde de fora. A URL fica no resumo do job. Em push
+na `main`, com tudo verde, o job `deploy` publica no Fly.io (ver abaixo).
+
+## Deploy (Fly.io)
+
+Host escolhido: **Fly.io**, região `gru` (São Paulo). Por quê: roda o `Dockerfile`
+sem mudar nada, WebSocket nativo, uma máquina sempre ligada (`min_machines_running
+= 1`, `max = 1` — o estado da partida vive em memória, então nunca pode haver duas
+instâncias), sem dormir no free tier como Render/Railway, e deploy por CLI que
+cabe num job do GitHub Actions. O túnel do Cloudflare continua sendo o caminho do
+hackathon (`docker compose`); no Fly a URL é direta: <https://graffiti-de-madrugada.fly.dev>.
+
+Configuração única (uma vez, na sua máquina):
+
+```bash
+brew install flyctl          # ou curl -L https://fly.io/install.sh | sh
+fly auth signup              # ou fly auth login
+fly apps create graffiti-de-madrugada
+fly deploy --ha=false        # primeiro deploy manual; os próximos são pelo CI
+fly tokens create deploy -x 999999h   # copie o token
+gh secret set FLY_API_TOKEN  # cole o token
+```
+
+Depois disso, todo push na `main` que passar em testes, e2e e stack Docker faz
+`fly deploy` automaticamente e confere `/health` na URL pública. Sem o secret o
+job de deploy é pulado com aviso no resumo do run.
+
+Parâmetros em [`fly.toml`](fly.toml): `shared-cpu-1x`, 512 MB, health check em
+`/health` a cada 15 s, HTTPS forçado, limite de 250 conexões.
 
 ## Estrutura
 
@@ -167,7 +200,8 @@ public/index.html  HUD, lobby, overlays
 public/game.js     Three.js: cidade, personagens, câmera, física, escalada, efeitos
 test/              node:test — unitário (cidade), integração (socket.io-client) e e2e (Chrome)
 tools/             harness puppeteer-core: gera os prints do README e apoia o e2e
-.github/workflows  CI: testes, e2e e stack Docker com túnel em todo push na main
+.github/workflows  CI/CD: testes, e2e, stack Docker com túnel e deploy no Fly.io
+fly.toml           app Fly.io: 1 máquina em São Paulo, health check, HTTPS
 Dockerfile         node:22-alpine
 compose.yaml       game + tunnel (Cloudflare Quick Tunnel)
 tunnel/            imagem do cloudflared que imprime a URL pública
