@@ -88,9 +88,9 @@ jobs:
     concurrency: deploy-production
     environment:
       name: production
-      url: ${{ vars.RENDER_URL || 'https://graffiti-de-madrugada.onrender.com' }}
+      url: ${{ vars.RENDER_URL || 'https://graffitidemadrugada.samuelramos.dev' }}
     env:
-      RENDER_URL: ${{ vars.RENDER_URL || 'https://graffiti-de-madrugada.onrender.com' }}
+      RENDER_URL: ${{ vars.RENDER_URL || 'https://graffitidemadrugada.samuelramos.dev' }}
     steps:
       - name: Skip when RENDER_DEPLOY_HOOK is not configured
         id: hook
@@ -133,5 +133,5 @@ jobs:
           git tag "$tag"
           git push origin "$tag"
           gh release create "$tag" --generate-notes --title "$tag" \
-            --notes "Publicado em ${{ vars.RENDER_URL || 'https://graffiti-de-madrugada.onrender.com' }} a partir de ${{ github.sha }}."
+            --notes "Publicado em ${{ vars.RENDER_URL || 'https://graffitidemadrugada.samuelramos.dev' }} a partir de ${{ github.sha }}."
           echo "### Release $tag" >> "$GITHUB_STEP_SUMMARY"

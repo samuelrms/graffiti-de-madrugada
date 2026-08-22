@@ -16,6 +16,9 @@ export interface GameOptions {
   quiet: boolean;
   /** directory with the built client (index.html + assets); undefined = API only */
   staticDir?: string;
+  /** canonical public URL (robots.txt, sitemap.xml); requests to other hosts get redirected when `canonicalRedirect` is on */
+  publicUrl: string;
+  canonicalRedirect: boolean;
 }
 
 export const DEFAULTS: GameOptions = {
@@ -28,6 +31,8 @@ export const DEFAULTS: GameOptions = {
   maxPlayers: 12,
   validateMovement: true,
   maxPerIp: Number(process.env.MAX_PER_IP ?? 1),
+  publicUrl: (process.env.PUBLIC_URL || 'https://graffitidemadrugada.samuelramos.dev').replace(/\/$/, ''),
+  canonicalRedirect: process.env.CANONICAL_REDIRECT === '1',
   quiet: false
 };
 

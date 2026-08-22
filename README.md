@@ -1,9 +1,9 @@
 # Graffiti de Madrugada
 
 [![CI](https://github.com/samuelrms/graffiti-de-madrugada/actions/workflows/ci.yml/badge.svg)](https://github.com/samuelrms/graffiti-de-madrugada/actions/workflows/ci.yml)
-[![Jogar agora](https://img.shields.io/badge/jogar-graffiti--de--madrugada.onrender.com-ff2d75)](https://graffiti-de-madrugada.onrender.com/)
+[![Jogar agora](https://img.shields.io/badge/jogar-graffitidemadrugada.samuelramos.dev-ff2d75)](https://graffitidemadrugada.samuelramos.dev/)
 
-**Jogue agora: <https://graffiti-de-madrugada.onrender.com/>** (plano free: o primeiro acesso pode levar ~40 s para acordar o servidor).
+**Jogue agora: <https://graffitidemadrugada.samuelramos.dev/>** (plano free: o primeiro acesso pode levar ~40 s para acordar o servidor).
 
 Jogo multiplayer 3D competitivo no navegador. De 2 a 12 pichadores por sala
 disputam uma cidade aberta durante uma noite de 3 minutos: pichar paredes dá
@@ -211,12 +211,12 @@ src/
     protocol.ts      tipos de todos os eventos do socket e da API (fonte única da verdade)
   server/
     index.ts         entrada: serve dist/public e sobe o servidor
-    http/server.ts   Express + Socket.IO, /health, /api/rooms, registro e ciclo de vida das salas
+    http/server.ts   Express + Socket.IO, /health, /api/rooms, robots/sitemap, redirect canônico, salas
     game/room.ts     uma partida: jogadores, pintura, combate, pickups, fases
     game/config.ts   constantes de balanceamento (armas, poderes, pickups, limites)
     game/geometry.ts raycast contra prédios/jogadores e validação de movimento
   client/
-    index.html       página, meta tags (Open Graph, favicon, manifest)
+    index.html       página, SEO (canonical, Open Graph, Twitter, JSON-LD), favicon, manifest
     main.ts          loop de simulação (timer) e de render (rAF)
     style.css        HUD, home, lobby, toque
     core/state.ts    estado mutável compartilhado entre módulos do cliente
@@ -280,7 +280,41 @@ Configuração única (painel do Render, sem cartão): **New → Blueprint** →
 repositório → o [`render.yaml`](render.yaml) cria o serviço (auto-deploy desligado:
 quem publica é o CI). Depois, no serviço: **Settings → Deploy Hook → copiar** e
 `gh secret set RENDER_DEPLOY_HOOK`. Se o domínio for outro:
-`gh variable set RENDER_URL --body https://SEU.onrender.com`.
+`gh variable set RENDER_URL --body https://SEU.dominio`.
+
+### Domínio próprio e SEO
+
+O plano free do Render aceita domínio personalizado com TLS automático:
+
+1. No serviço: **Settings → Custom Domains → Add** → `graffitidemadrugada.samuelramos.dev`.
+2. No Cloudflare (DNS de `samuelramos.dev`): registro **CNAME**, nome
+   `graffitidemadrugada`, destino `graffiti-de-madrugada.onrender.com`, **Proxy
+   desligado** (nuvem cinza, "DNS only") até o Render emitir o certificado.
+3. Espere o Render mostrar o domínio como verificado com certificado (alguns
+   minutos). Se o Render pedir um registro TXT extra, adicione também.
+4. Opcional: ligar o proxy do Cloudflare (nuvem laranja). Aí em **SSL/TLS** use
+   o modo **Full (strict)**; WebSocket passa normalmente pelo proxy.
+5. O redirect do endereço antigo já vem ligado no `render.yaml`
+   (`CANONICAL_REDIRECT=1`): páginas em `*.onrender.com` respondem 301 para o
+   domínio; `/health` e o socket não são redirecionados. O CI valida o deploy
+   no domínio final.
+
+A URL canônica vem de `PUBLIC_URL` (servidor) e `VITE_PUBLIC_URL` (cliente, no
+build). O padrão é o domínio acima; `.env` e `render.yaml` já trazem os valores.
+
+O que está coberto para buscadores, redes sociais e assistentes de IA:
+
+| Camada | Onde |
+| --- | --- |
+| `title`, `description`, `keywords`, `robots`, `canonical`, `theme-color`, manifest com categorias e screenshot | `src/client/index.html`, `public/manifest.webmanifest` |
+| Open Graph completo (imagem 1280×720 com alt) e Twitter Card | `index.html` |
+| JSON-LD `@graph`: `WebSite`, `Person`, `VideoGame` (grátis, 2–12 jogadores, plataforma, repositório) e `FAQPage` | `index.html` |
+| Conteúdo real sem JS: `h1`, resumo, "Como jogar" e FAQ visíveis na home | `index.html` |
+| `robots.txt` liberando buscadores e crawlers de IA (GPTBot, ClaudeBot, PerplexityBot, Google-Extended…), `sitemap.xml`, `llms.txt`, `.well-known/security.txt` | `src/server/http/server.ts` |
+| Redirect 301 do host antigo, gzip/brotli, `Cache-Control` imutável para assets com hash e `no-cache` no HTML | `server.ts` |
+
+Para fechar o ciclo fora do código: enviar o sitemap no Google Search Console e
+no Bing Webmaster Tools, e validar o preview do link no LinkedIn Post Inspector.
 
 ## Fora do escopo
 

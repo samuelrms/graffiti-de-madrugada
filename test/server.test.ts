@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import http from 'node:http';
 import { io, type Socket } from 'socket.io-client';
 import { createGame, cleanRoomName, newRoomId } from '../src/server/http/server.ts';
 import { WEAPONS, type GameOptions } from '../src/server/game/config.ts';
@@ -495,4 +496,48 @@ test('server snaps a cheating client back and keeps the last valid position', as
   assert.equal(corrections[0].x, sp.x + 1);
   await wait(60);
   assert.equal(me(a).x, sp.x + 1);
+});
+
+test('SEO: robots.txt and sitemap point to the public URL; canonical redirect is opt-in', async (t) => {
+  const { game } = await setup(t, { publicUrl: 'https://jogo.exemplo.dev', canonicalRedirect: true });
+  const base = `http://localhost:${game.port}`;
+  const robots = await (await fetch(`${base}/robots.txt`)).text();
+  assert.match(robots, /Disallow: \/api\//);
+  assert.match(robots, /Sitemap: https:\/\/jogo\.exemplo\.dev\/sitemap\.xml/);
+  const sitemap = await (await fetch(`${base}/sitemap.xml`)).text();
+  assert.match(sitemap, /<loc>https:\/\/jogo\.exemplo\.dev\/<\/loc>/);
+  // fetch() refuses to override Host, so use http.request for the virtual-host checks.
+  const getAs = (port: number, path: string, host: string) => new Promise<{ status: number; location?: string }>((resolve, reject) => {
+    http.get({ host: '127.0.0.1', port, path, headers: { host } }, (res) => { res.resume(); resolve({ status: res.statusCode ?? 0, location: res.headers.location }); }).on('error', reject);
+  });
+  // localhost is never redirected; another host is, except /health
+  assert.equal((await getAs(game.port, '/health', 'graffiti.onrender.com')).status, 200);
+  const r = await getAs(game.port, '/?x=1', 'graffiti.onrender.com');
+  assert.equal(r.status, 301);
+  assert.equal(r.location, 'https://jogo.exemplo.dev/?x=1');
+  const off = createGame({ port: 0, quiet: true, publicUrl: 'https://jogo.exemplo.dev', canonicalRedirect: false });
+  await off.ready;
+  t.after(() => off.close());
+  assert.equal((await getAs(off.port, '/api/rooms', 'graffiti.onrender.com')).status, 200);
+});
+
+test('SEO: llms.txt, AI crawlers allowed, compression and cache headers', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gdm-'));
+  fs.mkdirSync(path.join(dir, 'assets'));
+  fs.writeFileSync(path.join(dir, 'index.html'), `<html>${'x'.repeat(2000)}</html>`);
+  fs.writeFileSync(path.join(dir, 'assets', 'app-abc123.js'), 'console.log(1)');
+  const { game } = await setup(t, { staticDir: dir, publicUrl: 'https://jogo.exemplo.dev' });
+  const base = `http://localhost:${game.port}`;
+  const llms = await (await fetch(`${base}/llms.txt`)).text();
+  assert.match(llms, /^# Graffiti de Madrugada/);
+  assert.match(llms, /https:\/\/jogo\.exemplo\.dev\/api\/rooms/);
+  const robots = await (await fetch(`${base}/robots.txt`)).text();
+  for (const bot of ['GPTBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended']) assert.match(robots, new RegExp(`User-agent: ${bot}\\nAllow: /`));
+  const html = await fetch(`${base}/`, { headers: { 'accept-encoding': 'gzip' } });
+  assert.equal(html.headers.get('content-encoding'), 'gzip');
+  assert.equal(html.headers.get('cache-control'), 'no-cache');
+  assert.equal(html.headers.get('x-powered-by'), null);
+  const asset = await fetch(`${base}/assets/app-abc123.js`);
+  assert.match(asset.headers.get('cache-control') ?? '', /immutable/);
+  assert.equal((await fetch(`${base}/.well-known/security.txt`)).status, 200);
 });
