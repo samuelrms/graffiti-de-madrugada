@@ -1,0 +1,11 @@
+{
+  "name": "Graffiti de Madrugada",
+  "short_name": "Graffiti",
+  "description": "Multiplayer 3D no navegador: piche paredes, escale prédios, derrube rivais.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#07060d",
+  "theme_color": "#07060d",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

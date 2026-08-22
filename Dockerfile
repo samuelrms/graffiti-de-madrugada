@@ -1,15 +1,20 @@
-FROM node:22-alpine
-
+# ---- build: TypeScript server + Vite client ----
+FROM node:22-alpine AS build
 WORKDIR /app
+RUN corepack enable
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
+RUN pnpm install --frozen-lockfile
+COPY tsconfig*.json vite.config.ts ./
+COPY src ./src
+RUN pnpm build
 
-COPY package.json ./
-RUN npm install --omit=dev
-
-COPY server.js ./
-COPY public ./public
-COPY shared ./shared
-
-ENV PORT=8080
+# ---- runtime: only production deps + dist ----
+FROM node:22-alpine
+WORKDIR /app
+ENV NODE_ENV=production PORT=8080
+RUN corepack enable
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
+RUN pnpm install --frozen-lockfile --prod
+COPY --from=build /app/dist ./dist
 EXPOSE 8080
-
-CMD ["npm", "start"]
+CMD ["node", "dist/server/server/index.js"]
