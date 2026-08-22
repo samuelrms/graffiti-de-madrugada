@@ -44,7 +44,7 @@ export const input = {
 };
 
 /** Toggled by tools/ (screenshots, e2e). */
-export const flags = { render: true, sim: true };
+export const flags = { render: true, sim: true, freeCam: false };
 
 export const isTouch = typeof window !== 'undefined' && (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window);
 

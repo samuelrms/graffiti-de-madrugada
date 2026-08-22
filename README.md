@@ -100,6 +100,16 @@ No celular/tablet: joystick virtual na metade esquerda (empurrar até a borda =
 correr), arrastar na metade direita para olhar, e botões usar, pular/escalar,
 soco, Q e trocar ferramenta.
 
+### Personagens
+
+![Os 12 personagens](docs/img/personagens.jpg)
+
+Doze visuais procedurais (boné, gorro, moicano, capuz, bucket, afro, rabo de
+cavalo, capacete, fone, bandana, robô…), cada um com rosto, tênis, jaqueta e
+cabelo próprios. Corpo articulado (quadril, joelho, ombro, cotovelo) com
+animação de corrida, sprint, escalada, pulo, pintura e respiração parada.
+Cel-shading de 3 tons com contorno. Nada é baixado: tudo é gerado em código.
+
 ### Classes e poderes
 
 O poder é definido pela vaga no lobby (`slot % 4`):
@@ -234,7 +244,10 @@ render.yaml          blueprint Render: web service Docker free, health check /he
 - **Servidor**: Node 22 + Express 5 + Socket.IO 4, compilado com `tsc`.
 - **Cliente**: Three.js + [lucide](https://lucide.dev) (ícones SVG) empacotados com
   **Vite**. Modelos, prédios, texturas e decals são procedurais — nenhum asset
-  externo.
+  externo. Personagens têm esqueleto simples (quadril, joelho, ombro, cotovelo),
+  membros em cápsula, rosto, tênis, jaqueta e 12 visuais; `MeshToonMaterial` com
+  rampa de 3 tons + contorno por casco invertido nas partes grandes (≈20 meshes
+  por personagem, leve mesmo com 12 em cena).
 - **pnpm** (corepack) em dev, CI e Docker.
 - Outras linguagens: nada no jogo justifica hoje — o custo está no render do
   navegador, não no servidor. A divisão `shared/` deixa o caminho aberto para um

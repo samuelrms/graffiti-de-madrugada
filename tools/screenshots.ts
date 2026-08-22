@@ -133,7 +133,40 @@ const city = C.generateCity();
     }
     await B.sleep(250);
     await shot(a, 'kill');
-    console.log('kill.jpg', await B.me(a).then((m: any) => ({ kills: m.kills, score: m.score })));
+
+    // Showcase of the 12 looks: two rows, free camera up close, HUD hidden.
+    await B.sleep(800); // let shot effects fade
+    await a.evaluate((colors: string[]) => {
+      const D = window.DBG; const T = D.THREE;
+      document.head.insertAdjacentHTML('beforeend', '<style id="noui">#ui{display:none!important}</style>');
+      const cx = 100, cz = 132; // next crossing south: open ground, real players stay far behind
+      D.hiddenPickups = D.scene.children.filter((o: any) => o.type === 'Group' && o.children.some((c: any) => c.isSprite) && Math.hypot(o.position.x - cx, o.position.z - cz) < 12);
+      for (const o of D.hiddenPickups) o.position.y -= 500;
+      D.lineup = [];
+      for (let i = 0; i < 12; i++) {
+        const ch = D.buildCharacter(i, colors[i]);
+        const row = i < 6 ? 0 : 1;
+        const col = (i % 6) - 2.5;
+        ch.group.position.set(cx + col * 1.3 + (row ? 0.65 : 0), 0, cz - 3.2 + row * 2.2);
+        ch.group.rotation.y = Math.PI; // face +z, towards the camera
+        ch.parts.tag.visible = false;
+        ch.t = i * 0.7;
+        D.scene.add(ch.group);
+        D.lineup.push(ch);
+      }
+      D.flags.freeCam = true;
+      D.camera.position.set(cx, 3.0, cz + 4.2);
+      D.camera.lookAt(new T.Vector3(cx, 0.9, cz - 2.2));
+    }, ['#ff2d75', '#00e5ff', '#b4ff39', '#ffb300', '#b967ff', '#ff6a00', '#2dff9b', '#ff4dff', '#4d7cff', '#ffe600', '#ff3b3b', '#7dffea']);
+    await B.sleep(300);
+    await shot(a, 'personagens');
+    console.log('personagens.jpg');
+    await a.evaluate(() => {
+      for (const ch of window.DBG.lineup) window.DBG.scene.remove(ch.group);
+      for (const o of window.DBG.hiddenPickups) o.position.y += 500;
+      window.DBG.flags.freeCam = false;
+      document.querySelector('#noui')?.remove();
+    });
 
     // Touch layout: emulate a phone.
     const m = await (await browser.createBrowserContext()).newPage();
