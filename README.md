@@ -294,11 +294,10 @@ O plano free do Render aceita domínio personalizado com TLS automático:
    minutos). Se o Render pedir um registro TXT extra, adicione também.
 4. Opcional: ligar o proxy do Cloudflare (nuvem laranja). Aí em **SSL/TLS** use
    o modo **Full (strict)**; WebSocket passa normalmente pelo proxy.
-5. Ligue o redirect do endereço antigo: variável `CANONICAL_REDIRECT=1` no Render
-   (páginas em `*.onrender.com` passam a responder 301 para o domínio; `/health`
-   e o socket não são redirecionados). Depois, `gh variable set RENDER_URL --body
-   https://graffitidemadrugada.samuelramos.dev` para o CI validar o deploy no
-   domínio final.
+5. O redirect do endereço antigo já vem ligado no `render.yaml`
+   (`CANONICAL_REDIRECT=1`): páginas em `*.onrender.com` respondem 301 para o
+   domínio; `/health` e o socket não são redirecionados. O CI valida o deploy
+   no domínio final.
 
 A URL canônica vem de `PUBLIC_URL` (servidor: `robots.txt`, `sitemap.xml`,
 redirect) e `VITE_PUBLIC_URL` (cliente, no build: `canonical`, Open Graph,
