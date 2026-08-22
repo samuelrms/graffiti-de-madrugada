@@ -133,6 +133,26 @@ const city = C.generateCity();
     }
     await B.sleep(250);
     await shot(a, 'kill');
+
+    // Line-up of the 12 looks in front of Mina, lit by the street lamp.
+    await a.evaluate((colors: string[]) => {
+      const D = window.DBG; const P = D.player;
+      const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw); const rx = Math.cos(P.yaw), rz = -Math.sin(P.yaw);
+      for (let i = 0; i < 12; i++) {
+        const ch = D.buildCharacter(i, colors[i]);
+        const off = (i - 5.5) * 1.25;
+        ch.group.position.set(P.x + fx * 5.5 + rx * off, P.y, P.z + fz * 5.5 + rz * off);
+        ch.group.rotation.y = P.yaw + Math.PI;
+        ch.parts.tag.visible = false;
+        D.scene.add(ch.group);
+        D.lineup = D.lineup || []; D.lineup.push(ch);
+      }
+      P.pitch = 0.12;
+    }, ['#ff2d75', '#00e5ff', '#b4ff39', '#ffb300', '#b967ff', '#ff6a00', '#2dff9b', '#ff4dff', '#4d7cff', '#ffe600', '#ff3b3b', '#7dffea']);
+    await B.sleep(300);
+    await shot(a, 'personagens');
+    console.log('personagens.jpg');
+    await a.evaluate(() => { for (const ch of window.DBG.lineup) window.DBG.scene.remove(ch.group); });
     console.log('kill.jpg', await B.me(a).then((m: any) => ({ kills: m.kills, score: m.score })));
 
     // Touch layout: emulate a phone.

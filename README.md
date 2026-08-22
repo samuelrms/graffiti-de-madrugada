@@ -16,7 +16,7 @@ vence quem tiver mais pontos.
 | | |
 | --- | --- |
 | ![Home](docs/img/home.jpg) Home: salas abertas, criar sala (trancada ou não), entrar por ID ou nome | ![Lobby](docs/img/lobby.jpg) Lobby da sala: nome, link, dono escolhe o modo, "Pronto!" de todos |
-| ![Equipes](docs/img/equipes.jpg) Modo equipes: 2 a 4 times balanceados, cor por equipe, sem fogo amigo | ![Cidade](docs/img/cidade.jpg) Cidade procedural: casas, lojas e torres para escalar |
+| ![Equipes](docs/img/equipes.jpg) Modo equipes: 2 a 4 times balanceados, cor por equipe, sem fogo amigo | ![Personagens](docs/img/personagens.jpg) 12 personagens procedurais com cel-shading e contorno |
 | ![Pichando](docs/img/pichando.jpg) Spray na parede — tiles valem mais quanto mais alto | ![Escalando](docs/img/escalando.jpg) Segurar Espaço na parede = escalar |
 | ![Telhado](docs/img/telhado.jpg) Bazuca de tinta espera no topo das torres | ![Combate](docs/img/combate.jpg) Pistola, bazuca, soco e poderes |
 | ![Kill feed](docs/img/kill.jpg) Kill feed com nomes e ranking ao vivo | ![Controles de toque](docs/img/toque.jpg) Celular: joystick, arrastar para olhar, botões |
@@ -234,7 +234,10 @@ render.yaml          blueprint Render: web service Docker free, health check /he
 - **Servidor**: Node 22 + Express 5 + Socket.IO 4, compilado com `tsc`.
 - **Cliente**: Three.js + [lucide](https://lucide.dev) (ícones SVG) empacotados com
   **Vite**. Modelos, prédios, texturas e decals são procedurais — nenhum asset
-  externo.
+  externo. Personagens têm esqueleto simples (quadril, joelho, ombro, cotovelo),
+  membros em cápsula, rosto, tênis, jaqueta e 12 visuais; `MeshToonMaterial` com
+  rampa de 3 tons + contorno por casco invertido nas partes grandes (≈20 meshes
+  por personagem, leve mesmo com 12 em cena).
 - **pnpm** (corepack) em dev, CI e Docker.
 - Outras linguagens: nada no jogo justifica hoje — o custo está no render do
   navegador, não no servidor. A divisão `shared/` deixa o caminho aberto para um
