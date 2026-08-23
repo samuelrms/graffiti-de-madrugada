@@ -148,6 +148,18 @@ export function createGame(opts: Partial<GameOptions> = {}): Game {
     return (first?.trim() || socket.handshake.address || '').replace(/^::ffff:/, '');
   }
 
+  /** Quick play: fullest public room with a free slot (lobby first, then live matches), else a fresh public room. */
+  let autoRooms = 0;
+  function pickQuickplayRoom(): Room {
+    const open = [...rooms.values()].filter((r) => !r.locked && r.size > 0 && r.size < cfg.maxPlayers && r.phase !== 'ended');
+    open.sort((a, b) => (a.phase === 'lobby' ? 0 : 1) - (b.phase === 'lobby' ? 0 : 1) || b.size - a.size);
+    if (open[0]) return open[0];
+    const empty = [...rooms.values()].find((r) => !r.locked && r.size === 0);
+    if (empty) return empty;
+    return makeRoom(`Rua aberta ${++autoRooms}`, false);
+  }
+  app.get('/api/quickplay', (_req, res) => { res.json(pickQuickplayRoom().info()); });
+
   /** Resolve by id (any room) or by name (public rooms only, case-insensitive). */
   function findRoom(key: string): Room | undefined {
     const k = key.trim();
@@ -169,23 +181,28 @@ export function createGame(opts: Partial<GameOptions> = {}): Game {
     current.get(socket.id)?.leave(socket); // room.onLeave cleans the registry maps
   }
 
+  function joinRoom(socket: GameSocket, room: Room, req: { name?: string; client?: string }): void {
+    leaveCurrent(socket);
+    // One player per browser (token) and, by default, one per IP.
+    const token = typeof req.client === 'string' ? req.client.slice(0, 64) : '';
+    if (token && activeClients.has(token)) { socket.emit('joinError', { reason: 'duplicate' }); return; }
+    const ip = ipOf(socket);
+    if (cfg.maxPerIp > 0 && (ipCount.get(ip) ?? 0) >= cfg.maxPerIp) { socket.emit('joinError', { reason: 'ip-limit' }); return; }
+    if (!room.join(socket, typeof req.name === 'string' ? req.name : undefined)) { socket.emit('joinError', { reason: 'full' }); return; }
+    current.set(socket.id, room);
+    if (token) { activeClients.add(token); clientOf.set(socket.id, token); }
+    ipCount.set(ip, (ipCount.get(ip) ?? 0) + 1);
+  }
+
   io.on('connection', (socket: GameSocket) => {
     socket.on('join', (req) => {
       const key = typeof req?.room === 'string' ? req.room : '';
       if (!key) { socket.emit('joinError', { reason: 'invalid' satisfies JoinError }); return; }
       const room = findRoom(key);
       if (!room) { socket.emit('joinError', { reason: 'not-found' }); return; }
-      leaveCurrent(socket);
-      // One player per browser (token) and, by default, one per IP.
-      const token = typeof req.client === 'string' ? req.client.slice(0, 64) : '';
-      if (token && activeClients.has(token)) { socket.emit('joinError', { reason: 'duplicate' }); return; }
-      const ip = ipOf(socket);
-      if (cfg.maxPerIp > 0 && (ipCount.get(ip) ?? 0) >= cfg.maxPerIp) { socket.emit('joinError', { reason: 'ip-limit' }); return; }
-      if (!room.join(socket, typeof req.name === 'string' ? req.name : undefined)) { socket.emit('joinError', { reason: 'full' }); return; }
-      current.set(socket.id, room);
-      if (token) { activeClients.add(token); clientOf.set(socket.id, token); }
-      ipCount.set(ip, (ipCount.get(ip) ?? 0) + 1);
+      joinRoom(socket, room, req);
     });
+    socket.on('quickplay', (req) => { joinRoom(socket, pickQuickplayRoom(), req ?? {}); });
     socket.on('disconnect', () => leaveCurrent(socket));
   });
 

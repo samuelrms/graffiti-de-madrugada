@@ -79,6 +79,8 @@ export interface RoomInfo {
 }
 /** `client` is a per-browser token so one person cannot play from several tabs. */
 export interface JoinRequest { room: string; name?: string; client?: string }
+/** Quick play: the server picks (or creates) a public room. */
+export interface QuickplayRequest { name?: string; client?: string }
 export type JoinError = 'not-found' | 'full' | 'invalid' | 'duplicate' | 'ip-limit';
 export interface ModeRequest { mode: GameMode; teams?: number }
 
@@ -132,6 +134,7 @@ export interface ServerToClient {
 /** Events the client emits. */
 export interface ClientToServer {
   join: (req: JoinRequest) => void;
+  quickplay: (req: QuickplayRequest) => void;
   leave: () => void;
   /** owner only, lobby only */
   setMode: (m: ModeRequest) => void;

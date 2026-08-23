@@ -122,6 +122,17 @@ test('two browsers play a round: lobby → paint → climb → kill', { skip: !c
     assert.equal((await B.me(a)).kills, 1);
     assert.ok(await a.evaluate(() => document.querySelector('#feed')!.textContent!.includes('Zé')), 'kill feed shows the victim');
     await a.waitForFunction(() => !window.DBG.state().players.find((p: any) => p.name === 'Zé').dead, { timeout: 6000, polling: 200 });
+    // Quick play from a third browser lands in this public-less world: Mina's room is locked, so a new public room is created.
+    const q = await B.openPlayer(browser, url, 'Quick', { width: 320, height: 200 });
+    await q.waitForSelector('#home:not(.hidden)');
+    await q.type('#homeName', 'Quick');
+    await q.click('#quickplay');
+    await q.waitForFunction(() => window.DBG && window.DBG.state().players.length > 0, { timeout: 15000, polling: 200 });
+    const qRoom = await q.evaluate(() => location.hash.replace('#r=', ''));
+    assert.notEqual(qRoom, roomId, 'locked room is never picked by quick play');
+    assert.match(await q.evaluate(() => document.querySelector('#lobbyRoom')?.textContent ?? ''), /Rua aberta/);
+    await q.close();
+
     // Owner leaves: Zé inherits the room; when he leaves too the room is destroyed.
     await a.evaluate(() => window.DBG.socket.emit('leave'));
     await b.waitForFunction(() => document.querySelector('#roomBadge')?.textContent, { timeout: 5000, polling: 200 });

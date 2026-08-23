@@ -185,3 +185,10 @@ body.menu #board, body.menu #bottomleft, body.menu #bottomright, body.menu #hint
 body.paused #cross, body.paused #hint { display: none !important; }
 #audioHint { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); font-size: 13px; color: var(--texto); background: rgba(46, 41, 37, 0.9); padding: 6px 12px; border-radius: var(--r-ctrl); z-index: 6; }
 #audioHint.hidden { display: none; }
+
+/* ---------- Quick play ---------- */
+.quick { display: grid; grid-template-columns: 1fr auto; gap: 4px 14px; align-items: center; margin: 6px 0 4px; }
+.quick .hint { grid-column: 1 / -1; margin: 0; }
+#quickplay { margin: 0; padding: 11px 22px; font-size: 16px; }
+/* only one terracotta-filled button per screen: create/join become outlined */
+#createBtn { background: transparent; color: var(--terra-clara); border-color: var(--terra); }

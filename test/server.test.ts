@@ -541,3 +541,38 @@ test('SEO: llms.txt, AI crawlers allowed, compression and cache headers', async 
   assert.match(asset.headers.get('cache-control') ?? '', /immutable/);
   assert.equal((await fetch(`${base}/.well-known/security.txt`)).status, 200);
 });
+
+test('quick play: fullest joinable public room, lobby before live matches, never locked; creates when needed', async (t) => {
+  const { game, room, add } = await setup(t);
+  const base = `http://localhost:${game.port}`;
+  const quick = (name: string, client: string) => new Promise<Client>((resolve, reject) => {
+    const s = io(base, { transports: ['websocket'], forceNew: true });
+    const data = { socket: s, state: null, welcome: null, events: [] } as unknown as Client;
+    s.on('welcome', (w) => { data.welcome = w; resolve(data); });
+    s.on('joinError', (e) => { s.close(); reject(new Error(`joinError ${e.reason}`)); });
+    s.on('connect', () => s.emit('quickplay', { name, client }));
+    t.after(() => s.close());
+  });
+  // Only the empty default room exists: quick play reuses it instead of creating another.
+  const q1 = await quick('Q1', 'qa');
+  assert.equal(q1.welcome.room.id, room.id);
+  // A fuller lobby elsewhere wins over the one with a single player.
+  const busy = game.createRoom('Cheia');
+  await add(false, busy.id, 'B1'); await add(false, busy.id, 'B2'); await add(false, busy.id, 'B3');
+  const locked = game.createRoom('Secreta', true);
+  await add(false, locked.id, 'L1'); await add(false, locked.id, 'L2'); await add(false, locked.id, 'L3'); await add(false, locked.id, 'L4');
+  const q2 = await quick('Q2', 'qb');
+  assert.equal(q2.welcome.room.id, busy.id, 'fullest public lobby, locked room ignored');
+  const info = await (await fetch(`${base}/api/quickplay`)).json();
+  assert.equal(info.id, busy.id);
+  // Rooms already playing come after lobbies; full rooms are skipped; otherwise a public room is created.
+  const full = game.createRoom('Lotada');
+  for (let i = 0; i < 12; i++) await add(false, full.id, `F${i}`);
+  assert.equal((await quick('Q3', 'qc')).welcome.room.id, busy.id);
+  for (const c of [q1, q2]) c.socket.emit('leave');
+  busy.destroy(); room.destroy();
+  await wait(150);
+  const q4 = await quick('Q4', 'qd');
+  assert.match(q4.welcome.room.name, /^Rua aberta \d+$/);
+  assert.equal(q4.welcome.room.locked, false);
+});

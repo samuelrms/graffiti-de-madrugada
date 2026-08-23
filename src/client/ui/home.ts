@@ -73,6 +73,7 @@ async function refreshRooms(): Promise<void> {
 const joinError = (r: JoinError): string => t((`join.${r}`) as never) || t('join.generic');
 
 export function renderHomeLabels(): void {
+  $('#quickplay').innerHTML = `${I.zap(18)} ${t('home.quickplay')}`;
   $('#createBtn').innerHTML = `${I.plus(16)} ${t('home.create')}`;
   $('#joinBtn').innerHTML = `${I.login(16)} ${t('home.join')}`;
   $('#lockLabel').innerHTML = `${I.lock(16)} ${t('home.locked')}`;
@@ -85,6 +86,13 @@ export function setupHome(): void {
   nameInput.value = localStorage.getItem(NAME_KEY) ?? '';
   renderHomeLabels();
 
+  $('#quickplay').addEventListener('click', () => {
+    audio.play('ui_click');
+    const name = playerName();
+    if (name) localStorage.setItem(NAME_KEY, name);
+    $('#homeError').textContent = '';
+    socket.emit('quickplay', { name: name || undefined, client: clientToken() });
+  });
   $('#createForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const name = $<HTMLInputElement>('#roomName').value.trim() || t('home.roomOf', { name: playerName() || t('home.someone') });
