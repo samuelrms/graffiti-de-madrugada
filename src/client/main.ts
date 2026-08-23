@@ -6,6 +6,7 @@ import { applyStatic, t } from './core/i18n.ts';
 import { pollGamepad } from './game/gamepad.ts';
 import { renderHomeLabels, setupHome } from './ui/home.ts';
 import { setupPause } from './ui/pause.ts';
+import { setupDevice } from './ui/device.ts';
 import { audio } from './audio/audio.ts';
 import { isFlashing, updateHud } from './ui/hud.ts';
 import { setTool, tryPaint } from './game/input.ts';
@@ -16,13 +17,14 @@ import { $, buildings, flags, input, net, player } from './core/state.ts';
 
 const remote = new Map<string, Character>();
 applyStatic();
+setupDevice();
 setupHome();
 setupPause({
   onLanguageChange: () => { renderHomeLabels(); updateHud(); },
   onLeave: () => $('#leaveBtn').click()
 });
 // Sound needs a user gesture; show a small hint until it is unlocked.
-setTimeout(() => { if (!audio.ready) $('#audioHint').classList.remove('hidden'); }, 1500);
+setTimeout(() => { if (!audio.ready && !document.body.classList.contains('touch')) $('#audioHint').classList.remove('hidden'); }, 1500);
 
 // ---------- Simulation: fixed 60 Hz steps, accumulator keeps the remainder ----------
 const STEP = 1 / 60;

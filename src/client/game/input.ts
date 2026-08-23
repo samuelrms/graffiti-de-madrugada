@@ -107,7 +107,6 @@ for (const sel of ['#name', '#lobbyName']) {
 
 // ---------- Touch (phones/tablets) ----------
 if (isTouch) {
-  document.body.classList.add('touch');
   const stick = $('#stick'), knob = $('#stick i');
   let stickId: number | null = null, lookId: number | null = null, lookLast: { x: number; y: number } | null = null;
   const stickCenter = () => { const r = stick.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, r: r.width / 2 }; };

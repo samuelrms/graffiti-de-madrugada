@@ -25,7 +25,7 @@
 }
 :root { color-scheme: dark; font-family: var(--font-sans); }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; overflow: hidden; background: var(--carvao); color: var(--texto); }
+html, body { margin: 0; height: 100%; height: 100dvh; overflow: hidden; background: var(--carvao); color: var(--texto); }
 canvas { display: block; touch-action: none; }
 #ui { position: fixed; inset: 0; pointer-events: none; }
 #top { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; align-items: flex-start; gap: 10px; }
@@ -90,7 +90,7 @@ kbd { background: var(--superficie-alta); padding: 1px 6px; border-radius: 4px; 
 #stick i { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.6); }
 #tbtns { position: absolute; right: 20px; bottom: 90px; display: grid; grid-template-columns: 64px 64px; gap: 10px; pointer-events: auto; }
 #tbtns button { margin: 0; width: 64px; height: 64px; border-radius: 50%; font-size: 24px; background: rgba(58, 52, 48, 0.85); border-color: var(--borda); touch-action: none; user-select: none; -webkit-user-select: none; }
-#tbtns button[data-t="fire"] { width: 84px; height: 84px; grid-row: span 2; align-self: center; background: rgba(180,255,57,0.85); color: var(--carvao); }
+#tbtns button[data-t="fire"] { width: 84px; height: 84px; grid-row: span 2; align-self: center; background: rgba(196, 85, 47, 0.9); border-color: var(--terra); color: var(--texto); }
 #tbtns button.on { outline: 3px solid var(--texto); }
 body.touch #bottomleft { bottom: auto; top: 8px; left: 50%; transform: translateX(-50%); width: 200px; text-align: center; }
 body.touch #hpText { font-size: 18px; }
@@ -192,3 +192,49 @@ body.paused #cross, body.paused #hint { display: none !important; }
 #quickplay { margin: 0; padding: 11px 22px; font-size: 16px; }
 /* only one terracotta-filled button per screen: create/join become outlined */
 #createBtn { background: transparent; color: var(--terra-clara); border-color: var(--terra); }
+
+/* ---------- Touch: compact landscape HUD with safe areas ---------- */
+body.touch #ui { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+body.touch #top { top: 6px; left: 8px; right: 8px; gap: 6px; align-items: center; }
+body.touch h1 { display: none; }
+body.touch #roomBadge { font-size: 11px; padding: 3px 8px; max-width: 46vw; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+body.touch #roomBadge b { display: none; }
+body.touch #timer { font-size: 20px; }
+body.touch #board { top: 34px; left: 8px; gap: 2px; transform: scale(0.8); transform-origin: top left; }
+body.touch #bottomleft { top: 4px; width: 150px; }
+body.touch #hpText { font-size: 15px; }
+body.touch #hp { height: 6px; } body.touch #armor { height: 4px; }
+body.touch #bottomright { top: 34px; right: 8px; }
+body.touch #tool span { font-size: 11px; padding: 2px 6px; margin-left: 4px; }
+body.touch #tool kbd { display: none; }
+body.touch #power { font-size: 12px; margin-top: 4px; }
+body.touch #power kbd { display: none; }
+body.touch #push { bottom: 26px; width: 90px; }
+body.touch #feed { top: 70px; right: 8px; }
+body.touch .kill { font-size: 12px; }
+body.touch #toast { font-size: 20px; transform: translate(-50%, -60px); }
+body.touch #stick { left: 28px; bottom: 28px; width: 110px; height: 110px; }
+body.touch #stick i { left: 32px; top: 32px; width: 46px; height: 46px; }
+body.touch #tbtns { right: 14px; bottom: 14px; grid-template-columns: 56px 56px; gap: 8px; }
+body.touch #tbtns button { width: 56px; height: 56px; font-size: 20px; }
+body.touch #tbtns button[data-t="fire"] { width: 72px; height: 72px; }
+body.touch #overlay h2 { font-size: 26px; }
+body.touch #overlay .big { font-size: 64px; }
+body.touch #lobbyList { width: min(92vw, 280px); max-height: 32vh; overflow: auto; }
+body.touch #overlay > div { max-height: 100dvh; overflow: auto; padding: 8px 0; }
+body.touch .homeCard { padding: 14px 16px; }
+body.touch .homeCard h1 { display: flex; font-size: 22px; }
+body.touch .about { display: none; }
+body.touch .pauseCard { padding: 14px 18px; }
+body.touch .pauseCard h2 { font-size: 20px; }
+
+/* ---------- Rotate gate (portrait on touch) ---------- */
+#rotate { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--carvao); color: var(--texto); text-align: center; padding: 24px; }
+#rotate.hidden { display: none; }
+.rotateCard { max-width: 320px; }
+.rotateCard .ic { color: var(--terra-clara); animation: spinHint 2.4s var(--ease) infinite; }
+.rotateCard h2 { margin: 12px 0 6px; font-family: var(--font-display); font-weight: 600; font-size: 26px; }
+.rotateCard p { margin: 4px 0; color: var(--texto); }
+.rotateCard .hint { font-size: 13px; color: var(--texto-2); margin-top: 12px; }
+@keyframes spinHint { 0%, 60%, 100% { transform: rotate(0); } 30% { transform: rotate(-90deg); } }
+body.portrait #ui, body.portrait canvas { visibility: hidden; }

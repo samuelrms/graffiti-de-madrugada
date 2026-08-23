@@ -116,7 +116,10 @@ const pt = {
   'ctl.pad.move': 'Analógico esquerdo', 'ctl.pad.run': 'LB ou L3', 'ctl.pad.look': 'Analógico direito', 'ctl.pad.jump': 'A (Cross)',
   'ctl.pad.use': 'RT', 'ctl.pad.swap': 'B (Círculo)', 'ctl.pad.melee': 'X (Quadrado)', 'ctl.pad.power': 'Y (Triângulo)', 'ctl.pad.menu': 'Start / Options',
   'pad.connected': 'Controle conectado',
-  'audio.enable': 'Clique ou aperte uma tecla para ligar o som'
+  'audio.enable': 'Clique ou aperte uma tecla para ligar o som',
+  'rotate.title': 'Gire o celular',
+  'rotate.text': 'O jogo só funciona na horizontal. Vire o aparelho para continuar.',
+  'rotate.ios': 'No iPhone: compartilhar → "Adicionar à Tela de Início" abre o jogo em tela cheia.'
 };
 
 const en: Record<keyof typeof pt, string> = {
@@ -230,7 +233,10 @@ const en: Record<keyof typeof pt, string> = {
   'ctl.pad.move': 'Left stick', 'ctl.pad.run': 'LB or L3', 'ctl.pad.look': 'Right stick', 'ctl.pad.jump': 'A (Cross)',
   'ctl.pad.use': 'RT', 'ctl.pad.swap': 'B (Circle)', 'ctl.pad.melee': 'X (Square)', 'ctl.pad.power': 'Y (Triangle)', 'ctl.pad.menu': 'Start / Options',
   'pad.connected': 'Gamepad connected',
-  'audio.enable': 'Click or press a key to enable sound'
+  'audio.enable': 'Click or press a key to enable sound',
+  'rotate.title': 'Rotate your phone',
+  'rotate.text': 'The game only works in landscape. Turn the device to continue.',
+  'rotate.ios': 'On iPhone: Share → "Add to Home Screen" opens the game fullscreen.'
 };
 
 export type Key = keyof typeof pt;
