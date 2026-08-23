@@ -48,8 +48,10 @@ pnpm start      # roda o build
 
 ## Como jogar
 
-1. Abra o link, digite seu nome. Na **home**, entre numa sala aberta, crie a sua
-   (marque **Trancada** para que só entre quem tiver o link) ou digite o ID/nome.
+1. Abra o link, digite seu nome e clique **Jogar agora**: você cai na sala
+   pública mais cheia com vaga (lobby primeiro, depois partidas em andamento) ou
+   numa sala nova. Ou, na **home**, escolha uma sala aberta, crie a sua (marque
+   **Trancada** para que só entre quem tiver o link) ou digite o ID/nome.
 2. No lobby, **copiar link** manda a sala para a crew; clique **Pronto!**. A noite
    começa quando todos estiverem prontos (mínimo 2).
 3. Clique na tela para travar o mouse. Piche, escale, atire, sobreviva.
@@ -294,7 +296,7 @@ render.yaml          blueprint Render: web service Docker free, health check /he
 | --- | --- | --- |
 | Tipos + lint | `pnpm typecheck` · `pnpm lint` | `tsc --noEmit` nos três alvos; ESLint com typescript-eslint |
 | Unitário | `pnpm test` | `shared/city.ts`: determinismo, prédios sem sobreposição e dentro do mapa, spawns fora de prédios, tiles/chaves, valor por altura |
-| Integração | `pnpm test` | servidor via socket.io-client: salas (criar, listar só públicas, entrar por ID/nome, trancada só por ID, isolamento, destruição ao esvaziar, IDs sem caracteres ambíguos), um por navegador e por IP, dono (passagem, modo, fechar), equipes (balanceamento, cores, sem fogo amigo, vencedor por equipe), lobby/ready, 13º rejeitado, pintura (alcance, cooldown, roubo), tiros/kill/respawn, bloqueio por prédio, soco, colete/kit, bazuca, escudo, fim/restart, clamp e validação de movimento |
+| Integração | `pnpm test` | servidor via socket.io-client: salas (criar, listar só públicas, entrar por ID/nome, trancada só por ID, isolamento, destruição ao esvaziar, IDs sem caracteres ambíguos), fila rápida (sala mais cheia, lobby primeiro, ignora trancada/cheia, cria quando precisa), um por navegador e por IP, dono (passagem, modo, fechar), equipes (balanceamento, cores, sem fogo amigo, vencedor por equipe), lobby/ready, 13º rejeitado, pintura (alcance, cooldown, roubo), tiros/kill/respawn, bloqueio por prédio, soco, colete/kit, bazuca, escudo, fim/restart, clamp e validação de movimento |
 | E2E | `pnpm test:e2e` | dois Chromes headless: home → cria sala trancada (não listada) → entra pelo link → segunda aba recusada → dono troca para equipes e volta → andar (sem correções do servidor) → pichar pela mira → menu de pausa e troca de idioma → escalar → matar → kill feed → respawn → dono sai e passa a sala → último sai e a sala some |
 
 GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) em todo
