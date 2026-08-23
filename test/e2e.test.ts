@@ -133,6 +133,18 @@ test('two browsers play a round: lobby → paint → climb → kill', { skip: !c
     assert.match(await q.evaluate(() => document.querySelector('#lobbyRoom')?.textContent ?? ''), /Rua aberta/);
     await q.close();
 
+    // Phones: portrait is blocked by the rotate gate, landscape shows the compact touch HUD.
+    const m = await (await browser.createBrowserContext()).newPage();
+    await m.emulate({ viewport: { width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' });
+    await m.goto(`${url}/#r=${roomId}`, { waitUntil: 'load', timeout: 60000 });
+    await m.waitForSelector('#rotate:not(.hidden)', { timeout: 15000 });
+    assert.equal(await m.evaluate(() => getComputedStyle(document.querySelector('#ui')!).visibility), 'hidden', 'game hidden in portrait');
+    await m.setViewport({ width: 844, height: 390, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+    await m.waitForSelector('#rotate.hidden', { timeout: 5000 });
+    assert.ok(await m.evaluate(() => document.body.classList.contains('touch') && !document.body.classList.contains('portrait')));
+    assert.equal(await m.evaluate(() => getComputedStyle(document.querySelector('#touch')!).display), 'block', 'touch controls visible in landscape');
+    await m.close();
+
     // Owner leaves: Zé inherits the room; when he leaves too the room is destroyed.
     await a.evaluate(() => window.DBG.socket.emit('leave'));
     await b.waitForFunction(() => document.querySelector('#roomBadge')?.textContent, { timeout: 5000, polling: 200 });

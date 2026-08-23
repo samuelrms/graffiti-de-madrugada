@@ -1,7 +1,7 @@
 // Lucide icons rendered to inline SVG strings for the HUD.
 import {
   ArrowBigUp, ArrowUp, BriefcaseMedical, Check, CloudFog, Crosshair, Crown, Flame, Footprints, Hand, Handshake, Heart,
-  Link, Lock, LogIn, Moon, Plus, Repeat, Rocket, Shield, ShieldCheck, Skull, Sparkles, SprayCan, Trophy, Users, Wind, Zap, createElement, type IconNode
+  Link, Lock, LogIn, Moon, Plus, Repeat, Rocket, RotateCcw, Shield, ShieldCheck, Skull, Sparkles, SprayCan, Trophy, Users, Wind, Zap, createElement, type IconNode
 } from 'lucide';
 import type { KillWeapon, PowerName } from '../../shared/protocol.ts';
 import type { PickupType } from '../../shared/city.ts';
@@ -45,7 +45,8 @@ export const I = {
   link: (s = 18) => icon(Link, 'link', s),
   plus: (s = 18) => icon(Plus, 'plus', s),
   login: (s = 18) => icon(LogIn, 'login', s),
-  crown: (s = 18) => icon(Crown, 'crown', s)
+  crown: (s = 18) => icon(Crown, 'crown', s),
+  rotate: (s = 18) => icon(RotateCcw, 'rotate', s)
 };
 
 export const POWER_ICON: Record<PowerName, (s?: number) => string> = {

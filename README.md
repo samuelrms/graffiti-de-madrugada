@@ -105,9 +105,13 @@ analógico esquerdo anda, direito olha, `A`/Cross pula e escala, `RT` picha ou
 atira, `B`/Círculo troca spray e arma, `X`/Quadrado soco, `Y`/Triângulo poder,
 `LB` ou `L3` corre, `Start` abre o menu.
 
-No celular/tablet: joystick virtual na metade esquerda (empurrar até a borda =
-correr), arrastar na metade direita para olhar, e botões usar, pular/escalar,
-soco, Q e trocar ferramenta.
+No celular/tablet: **só na horizontal** (em retrato aparece a tela "Gire o
+celular"). No primeiro toque o jogo pede tela cheia e trava a orientação onde o
+navegador permite (Android/Chrome); no iPhone o Safari não tem tela cheia para
+páginas, então a dica é "Adicionar à Tela de Início", que abre em tela cheia.
+Joystick virtual na metade esquerda (empurrar até a borda = correr), arrastar
+na metade direita para olhar, e botões usar, pular/escalar, soco, Q e trocar
+ferramenta. HUD compacto com áreas seguras (notch).
 
 ### Personagens
 
@@ -265,6 +269,7 @@ src/
     ui/home.ts       home: lista/cria/entra em salas, deep link #r=ID
     ui/icons.ts      ícones lucide → SVG inline
     ui/pause.ts      menu de pausa: configurações e tabela de controles
+    ui/device.ts     toque: gate de orientação, tela cheia, lock de orientação
     public/          favicon, manifest, imagem Open Graph, audio/ (CC0 + créditos)
 test/                node:test — unitário (cidade), integração (socket.io-client), e2e (Chrome)
 tools/               harness puppeteer-core: prints do README e apoio ao e2e
