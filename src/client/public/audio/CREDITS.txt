@@ -1,6 +1,8 @@
-All sound effects in this folder come from Kenney (https://kenney.nl), released under
-Creative Commons Zero (CC0 1.0): https://creativecommons.org/publicdomain/zero/1.0/
+Foley samples in this folder (footsteps, landing, jump, climb rustle, explosion crunch,
+punch) come from Kenney (https://kenney.nl), released under Creative Commons Zero
+(CC0 1.0): https://creativecommons.org/publicdomain/zero/1.0/
+Packs used: Impact Sounds, Sci-Fi Sounds, RPG Audio. Files renamed; no other changes.
 
-Packs used: Impact Sounds, Sci-Fi Sounds, Interface Sounds, RPG Audio, Music Jingles.
-Files were renamed to match their use in the game; no other changes.
-The spray-can hiss is synthesized at runtime with the Web Audio API.
+Everything else is synthesized at runtime with the Web Audio API:
+paint weapons and splats, spray hiss, UI, stingers, the lo-fi music loop and the
+night-city ambience (src/client/audio/).

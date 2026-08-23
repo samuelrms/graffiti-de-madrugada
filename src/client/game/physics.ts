@@ -82,17 +82,17 @@ export function physics(dt: number): void {
     player.vy = input.superJump ? JUMP * 1.9 : JUMP;
     input.superJump = false;
     grounded = false;
-    audio.play('jump', { volume: 0.5 });
+    audio.sample('jump', { volume: 0.5, reverb: 0.1 });
   }
-  if (grounded && !player.onGround && player.vy <= 0 && !player.climbing) audio.play('land', { volume: 0.5 });
+  if (grounded && !player.onGround && player.vy <= 0 && !player.climbing) audio.sample('land', { volume: 0.5, reverb: 0.2 });
   player.onGround = grounded;
   // Footsteps paced by speed; climbing gets its own rustle.
   if (grounded && moving) {
     stepClock += dt * speed;
-    if (stepClock > 2.6) { stepClock = 0; audio.play('step', { volume: sprinting ? 0.5 : 0.35, rate: sprinting ? 1.1 : 1 }); }
+    if (stepClock > 2.6) { stepClock = 0; audio.sample('step', { volume: sprinting ? 0.45 : 0.3, rate: sprinting ? 1.1 : 1, reverb: 0.15 }); }
   } else if (player.climbing) {
     stepClock += dt * 4;
-    if (stepClock > 2.2) { stepClock = 0; audio.play('climb', { volume: 0.45 }); }
+    if (stepClock > 2.2) { stepClock = 0; audio.sample('climb', { volume: 0.45, reverb: 0.1 }); }
   } else stepClock = 1.5;
   audio.setListener(player.x, player.y + 1.5, player.z, player.yaw);
   player.anim = player.climbing ? 'climb' : !grounded ? 'jump' : moving ? (sprinting ? 'sprint' : 'run') : 'idle';

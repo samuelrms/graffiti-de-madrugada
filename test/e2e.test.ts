@@ -80,6 +80,13 @@ test('two browsers play a round: lobby → paint → climb → kill', { skip: !c
     assert.equal(other.score, 0);
     assert.ok(await b.evaluate(() => window.DBG.state().players.some((p: any) => p.tiles > 0)), 'other client sees the score');
 
+    // Audio engine: unlock (autoplay allowed in the harness), music follows the phase, no exceptions.
+    await a.evaluate(() => window.DBG.audio.unlock());
+    await a.waitForFunction(() => window.DBG.audio.ready, { timeout: 5000, polling: 100 });
+    assert.equal(await a.evaluate(() => window.DBG.audio.music.level), 'match');
+    await a.evaluate(() => { const A = window.DBG.audio; A.synth.pistol(); A.synth.bazooka(); A.synth.splat({ x: 0, y: 0, z: 0 }); A.synth.stinger('kill'); A.synth.stinger('defeat'); A.spray(true, 'me'); A.spray(false, 'me'); A.sample('step'); });
+    await B.sleep(300);
+
     // Pause menu: Esc opens it, language switch re-renders the UI, Esc closes it.
     await a.keyboard.press('Escape');
     await a.waitForSelector('#pause:not(.hidden)', { timeout: 3000 });
@@ -153,6 +160,7 @@ test('two browsers play a round: lobby → paint → climb → kill', { skip: !c
     await b.evaluate(() => window.DBG.socket.emit('leave'));
     await B.sleep(300);
     assert.equal((await fetch(`${url}/api/rooms/${roomId}`)).status, 404, 'room destroyed when empty');
+    assert.deepEqual(B.pageErrors, [], 'no uncaught errors in any page');
   } finally {
     await browser.close();
     await game.close();

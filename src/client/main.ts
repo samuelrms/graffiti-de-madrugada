@@ -103,7 +103,7 @@ declare global {
   interface Window { DBG: unknown }
 }
 window.DBG = {
-  player, camera, scene, remote, buildings, keys: input.keys, socket, flags, THREE,
+  player, camera, scene, remote, buildings, keys: input.keys, socket, flags, THREE, audio,
   state: () => net.state,
   setTool,
   buildCharacter,

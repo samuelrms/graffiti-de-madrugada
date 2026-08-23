@@ -38,7 +38,7 @@ export function joinRoom(key: string): void {
 
 export async function createRoom(name: string, locked: boolean): Promise<void> {
   const r = await fetch('/api/rooms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, locked }) });
-  if (!r.ok) { $('#homeError').textContent = t('home.createFail'); audio.play('ui_error'); return; }
+  if (!r.ok) { $('#homeError').textContent = t('home.createFail'); audio.synth.error(); return; }
   const info = (await r.json()) as RoomInfo;
   joinRoom(info.id);
 }
@@ -87,7 +87,7 @@ export function setupHome(): void {
   renderHomeLabels();
 
   $('#quickplay').addEventListener('click', () => {
-    audio.play('ui_click');
+    audio.synth.click();
     const name = playerName();
     if (name) localStorage.setItem(NAME_KEY, name);
     $('#homeError').textContent = '';
@@ -118,7 +118,7 @@ export function setupHome(): void {
   socket.on('joinError', (e) => {
     showHome();
     $('#homeError').textContent = joinError(e.reason);
-    audio.play('ui_error');
+    audio.synth.error();
   });
   socket.on('welcome', (w) => {
     hideHome();

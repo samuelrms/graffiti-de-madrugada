@@ -22,10 +22,10 @@ export function setupPause(hooks: { onLanguageChange: () => void; onLeave: () =>
   const inv = $<HTMLInputElement>('#setInvertY');
   inv.checked = settings.invertY;
   inv.addEventListener('change', () => updateSettings({ invertY: inv.checked }));
-  $('#pauseResume').addEventListener('click', () => { audio.play('ui_click'); closePause(); });
-  $('#pauseLeave').addEventListener('click', () => { audio.play('ui_click'); closePause(); onLeave?.(); });
+  $('#pauseResume').addEventListener('click', () => { audio.synth.click(); closePause(); });
+  $('#pauseLeave').addEventListener('click', () => { audio.synth.click(); closePause(); onLeave?.(); });
   document.querySelectorAll<HTMLButtonElement>('#pauseTabs button').forEach((b) => b.addEventListener('click', () => {
-    audio.play('ui_click');
+    audio.synth.click();
     document.querySelectorAll('#pauseTabs button').forEach((x) => x.classList.toggle('on', x === b));
     document.querySelectorAll<HTMLElement>('.pausePane').forEach((p) => { p.style.display = p.id === b.dataset.pane ? '' : 'none'; });
   }));
@@ -36,7 +36,7 @@ function bindRange(sel: string, key: 'master' | 'sfx' | 'music' | 'sensitivity' 
   const el = $<HTMLInputElement>(sel);
   el.value = String(settings[key]);
   el.addEventListener('input', () => updateSettings({ [key]: Number(el.value) }));
-  el.addEventListener('change', () => audio.play('ui_hover', { volume: 0.6 }));
+  el.addEventListener('change', () => audio.synth.hover());
 }
 
 export function togglePause(): void { if (open) closePause(); else openPause(); }
@@ -46,7 +46,7 @@ export function openPause(): void {
   $('#pause').classList.remove('hidden');
   document.body.classList.add('paused');
   document.exitPointerLock?.();
-  audio.play('ui_click');
+  audio.synth.click();
 }
 export function closePause(): void {
   open = false;
