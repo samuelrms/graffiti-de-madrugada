@@ -135,16 +135,28 @@ paleta: Terra, Ocre, Sálvia e Papel.
 ### Idiomas e som
 
 Interface em **português (Brasil)** e **inglês**: detecta o idioma do navegador e
-dá para trocar no menu (`Esc`). Efeitos sonoros posicionais (passos, pulo,
-escalada, tiros, explosões, socos, spray, pickups, poderes), jingles de início,
-kill, morte, vitória e derrota, ambiente urbano e ticks da contagem. Volumes
-separados para geral, efeitos e música. O som liga no primeiro clique ou tecla
-(exigência dos navegadores).
+dá para trocar no menu (`Esc`).
 
-Todos os samples vêm da [Kenney](https://kenney.nl) (Impact Sounds, Sci-Fi
-Sounds, Interface Sounds, RPG Audio, Music Jingles), licença **CC0 1.0**; ver
-`src/client/public/audio/CREDITS.txt`. O chiado do spray é sintetizado em tempo
-real com a Web Audio API.
+Áudio é um sistema, não uma pilha de samples: um motor com compressor no master,
+reverb curto sintético (send por som), modelo de distância com pan estéreo, e
+*ducking* (trilha e ambiente abaixam quando toca um stinger). Tudo abaixo é
+gerado em tempo real com a Web Audio API, sem licença de terceiros:
+
+- **Armas de tinta**: pistola (pop pneumático + "thwip"), bazuca (lançamento
+  grave + whoosh), balão de tinta estourando, respingo de tile, tinta na parede.
+- **Spray**: chiado com flutter e chocalho da lata, posicional para os outros.
+- **Stingers** em lá menor: início, kill, morte, vitória, derrota (descida + sub
+  grave), pronto; contagem regressiva.
+- **Trilha lo-fi procedural**: 86 BPM com swing, bumbo, caixa, chimbal, baixo
+  pentatônico, dois acordes em serras desafinadas com filtro lento, crepitar de
+  vinil e saturação leve. Só acordes no lobby, batida completa na partida.
+- **Ambiente urbano noturno**: vento (ruído marrom com filtro oscilante), zumbido
+  elétrico dos postes, carros passando ao longe com pan, grilos esparsos.
+
+Foley (passos em concreto, pouso, pulo, escalada, estouro, soco) vem da
+[Kenney](https://kenney.nl), licença **CC0 1.0**; ver
+`src/client/public/audio/CREDITS.txt`. Volumes separados para geral, efeitos e
+música/ambiente. O som liga no primeiro clique, tecla ou toque.
 
 ### Classes e poderes
 
@@ -258,7 +270,11 @@ src/
     core/state.ts    estado mutável compartilhado entre módulos do cliente
     core/settings.ts idioma, volumes, sensibilidade (localStorage)
     core/i18n.ts     dicionários pt-BR/en, t() e data-i18n
-    audio/audio.ts   Web Audio: samples CC0, spray sintetizado, som posicional, ambiente
+    audio/engine.ts  buses, compressor, reverb, distância/pan, ducking
+    audio/synth.ts   armas de tinta, UI e stingers sintetizados
+    audio/music.ts   trilha lo-fi procedural (sequenciador com lookahead)
+    audio/ambient.ts vento, zumbido, carros, grilos
+    audio/audio.ts   fachada: samples CC0 de foley + spray + acesso aos módulos
     game/gamepad.ts  Gamepad API (Xbox/PlayStation/Steam Deck)
     net/socket.ts    cliente Socket.IO tipado + handlers dos eventos
     game/physics.ts  física local, câmera, mira

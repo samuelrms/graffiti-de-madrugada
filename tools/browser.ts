@@ -14,6 +14,9 @@ const CANDIDATES = [
   '/usr/bin/chromium-browser'
 ].filter((p): p is string => !!p);
 
+/** Uncaught errors from every page opened through openPlayer (tests assert it stays empty). */
+export const pageErrors: string[] = [];
+
 export function findChrome(): string | null {
   return CANDIDATES.find((p) => fs.existsSync(p)) ?? null;
 }
@@ -34,7 +37,8 @@ export async function launch({ width = 1280, height = 720 } = {}): Promise<Brows
       '--disable-background-timer-throttling',
       '--disable-renderer-backgrounding',
       '--disable-backgrounding-occluded-windows',
-      '--mute-audio'
+      '--mute-audio',
+      '--autoplay-policy=no-user-gesture-required'
     ]
   });
 }
@@ -51,7 +55,7 @@ export async function openPlayer(browser: Browser, url: string, name: string, vi
   const ctx = await browser.createBrowserContext();
   const page = await ctx.newPage();
   if (viewport) await page.setViewport(viewport);
-  page.on('pageerror', (e) => console.error(`[${name}] pageerror`, (e as Error).message));
+  page.on('pageerror', (e) => { console.error(`[${name}] pageerror`, (e as Error).message); pageErrors.push(`${name}: ${(e as Error).message}`); });
   await page.goto(roomId ? `${url}/#r=${roomId}` : url, { waitUntil: 'load', timeout: 60000 });
   if (!roomId) return page; // caller drives the home screen
   try {

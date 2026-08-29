@@ -15,12 +15,13 @@ export const socket: Socket<ServerToClient, ClientToServer> = io();
 
 socket.on('welcome', (w) => {
   net.cfg = w; net.me = w.id; net.mySlot = w.slot;
+  audio.music.set('lobby');
   buildPickups(w.pickups);
   for (const [key, slot] of w.paint) setPaint(key, w.colors[slot] ?? '#888');
   const s = CITY.spawnPoints()[w.slot % 12];
   spawnLocal(s.x, 0, s.z);
 });
-socket.on('disconnect', () => { $('#overlay').classList.remove('hidden'); $('#ovTitle').textContent = t('hud.disconnected'); $('#ovText').textContent = t('hud.reload'); audio.stopAllSprays(); });
+socket.on('disconnect', () => { $('#overlay').classList.remove('hidden'); $('#ovTitle').textContent = t('hud.disconnected'); $('#ovText').textContent = t('hud.reload'); audio.stopAllSprays(); audio.music.set('off'); });
 socket.on('reset', () => {
   clearPaint();
   setReady(false);
@@ -34,38 +35,38 @@ socket.on('painted', (d) => {
   const k = CITY.parseKey(d.key);
   if (!k) return;
   const c = CITY.tileCenter(buildings[k.bi], k.face, k.i, k.j);
-  if (d.by === net.me) { burst(new THREE.Vector3(c.x, c.y, c.z), d.color, 0.4); audio.play('paint_tile', { volume: 0.25, rate: 1.3 }); }
-  else audio.play('paint_tile', { volume: 0.25, rate: 1.3, at: c });
+  if (d.by === net.me) { burst(new THREE.Vector3(c.x, c.y, c.z), d.color, 0.4); audio.synth.tile(undefined, 0.3); }
+  else audio.synth.tile(c, 0.3);
 });
 socket.on('shot', (d) => {
   const from = new THREE.Vector3(d.ox, d.oy, d.oz), to = new THREE.Vector3(d.hx, d.hy, d.hz);
   const p = net.state.players.find((x) => x.id === d.by);
   tracer(from, to, p?.color ?? '#fff');
   const mine = d.by === net.me;
-  audio.play(d.weapon === 'bazooka' ? 'bazooka' : 'pistol', mine ? { volume: 0.7 } : { volume: 0.7, at: from });
-  if (d.weapon === 'bazooka') { burst(to, '#d98e4a', 1.5); audio.play('explosion', { volume: 0.9, at: to }); }
-  else if (d.hit) burst(to, p?.color ?? '#fff', 0.3);
-  else audio.play('hit_wall', { volume: 0.3, at: to });
+  if (d.weapon === 'bazooka') audio.synth.bazooka(mine ? undefined : from); else audio.synth.pistol(mine ? undefined : from);
+  if (d.weapon === 'bazooka') { burst(to, '#d98e4a', 1.5); audio.synth.splat(to, 1); audio.sample('explosion', { volume: 0.5, at: to, rate: 0.9 }); }
+  else if (d.hit) { burst(to, p?.color ?? '#fff', 0.3); audio.synth.tile(to, 0.5); }
+  else audio.synth.wallHit(to);
 });
 socket.on('hit', (d) => {
   if (d.victim === net.me) { player.x += d.fx * 1.5; player.z += d.fz * 1.5; player.vy = 4; }
   const v = net.state.players.find((x) => x.id === d.victim);
-  if (v) { burst(new THREE.Vector3(v.x, v.y + 1, v.z), '#ffffff', 0.6); audio.play('punch', { volume: 0.8, at: { x: v.x, y: v.y + 1, z: v.z } }); }
+  if (v) { burst(new THREE.Vector3(v.x, v.y + 1, v.z), '#ffffff', 0.6); audio.sample('punch', { volume: 0.8, at: { x: v.x, y: v.y + 1, z: v.z } }); }
 });
-socket.on('damaged', (d) => { if (d.id === net.me) { flashDamage(); audio.play('hurt', { volume: 0.6 }); } });
+socket.on('damaged', (d) => { if (d.id === net.me) { flashDamage(); audio.synth.hurt(); } });
 socket.on('killed', (d) => {
-  if (d.id === net.me) { toast(`${I.skull(26)} ${t('toast.killedBy', { name: d.byName ?? t('toast.night'), loss: d.loss })}`, '#e0736c'); audio.play('death', { volume: 0.9, rate: 0.85 }); audio.play('boom', { volume: 0.5 }); audio.stopAllSprays(); }
-  else if (d.by === net.me) { toast(`${I.flame(26)} ${t('toast.youKilled', { name: d.name })}`, '#d98e4a'); audio.play('kill', { volume: 0.8 }); }
+  if (d.id === net.me) { toast(`${I.skull(26)} ${t('toast.killedBy', { name: d.byName ?? t('toast.night'), loss: d.loss })}`, '#e0736c'); audio.synth.stinger('death'); audio.stopAllSprays(); }
+  else if (d.by === net.me) { toast(`${I.flame(26)} ${t('toast.youKilled', { name: d.name })}`, '#d98e4a'); audio.synth.stinger('kill'); }
   killFeed(d);
 });
 socket.on('pickup', (d) => {
   if (d.by !== net.me) return;
   toast(`${PICKUP_ICON[d.type](26)} ${t(`pickup.${d.type}`)}`);
-  audio.play('pickup', { volume: 0.7 });
+  audio.synth.pickup();
 });
 socket.on('power', (d) => {
   const p = net.state.players.find((x) => x.id === d.id);
-  audio.play(d.name === 'shield' ? 'shield' : 'power', d.id === net.me ? { volume: 0.7 } : p ? { volume: 0.7, at: { x: p.x, y: p.y + 1, z: p.z } } : { volume: 0 });
+  if (d.name === 'shield' && d.id === net.me) audio.synth.shield(); else audio.synth.power(d.id === net.me ? undefined : p ? { x: p.x, y: p.y + 1, z: p.z } : undefined);
   if (d.id !== net.me) return;
   if (d.name === 'dash') input.dashUntil = performance.now() + d.duration;
   if (d.name === 'jump') superJumpNow();
@@ -79,17 +80,18 @@ socket.on('state', (s) => {
   if (!net.cfg) return;
   net.state = s;
   if (s.phase !== lastPhase) {
-    if (s.phase === 'playing') audio.play('match_start', { volume: 0.8 });
+    if (s.phase === 'playing') { audio.synth.stinger('start'); audio.music.set('match'); }
+    if (s.phase === 'lobby' || s.phase === 'countdown') audio.music.set('lobby');
     if (s.phase === 'ended') {
       const me = s.players.find((p) => p.id === net.me);
       const won = s.winner && (s.winner.team !== undefined ? s.winner.team === me?.team : s.winner.name === me?.name);
-      if (won) audio.play('victory', { volume: 0.9 });
-      else { audio.play('defeat', { volume: 1, rate: 0.75 }); audio.play('boom', { volume: 0.9, rate: 0.8 }); }
+      audio.music.set('lobby');
+      audio.synth.stinger(won ? 'victory' : 'defeat');
       audio.stopAllSprays();
     }
     lastPhase = s.phase;
   }
-  if (s.phase === 'countdown' && s.timeLeft !== lastCount) { lastCount = s.timeLeft; audio.play('countdown', { volume: 0.6, rate: s.timeLeft <= 1 ? 1.4 : 1 }); }
+  if (s.phase === 'countdown' && s.timeLeft !== lastCount) { lastCount = s.timeLeft; audio.synth.tick(s.timeLeft <= 1); }
   for (const p of s.players) if (p.id !== net.me) audio.spray(p.anim === 'paint' && !p.dead, p.id, { x: p.x, y: p.y + 1, z: p.z });
   updateHud();
 });

@@ -13,7 +13,7 @@ import { aimDirection, aimWallTile } from './physics.ts';
 const canvas = renderer.domElement;
 const keys = input.keys;
 
-export function setTool(t: Tool): void { if (player.tool !== t) audio.play('ui_hover', { volume: 0.5 }); player.tool = t; updateHud(); }
+export function setTool(t: Tool): void { if (player.tool !== t) audio.synth.hover(); player.tool = t; updateHud(); }
 
 export function shoot(): void {
   const d = aimDirection();
@@ -87,9 +87,9 @@ addEventListener('keyup', (e) => {
 addEventListener('blur', () => keys.clear());
 
 // ---------- Lobby / name ----------
-$('#restart').addEventListener('click', () => { audio.play('ui_click'); socket.emit('restart'); });
+$('#restart').addEventListener('click', () => { audio.synth.click(); socket.emit('restart'); });
 $('#ready').addEventListener('click', () => {
-  audio.play('ui_ready', { volume: 0.7 });
+  audio.synth.stinger('ready', 0.6);
   const next = !iAmReady;
   const name = $<HTMLInputElement>('#lobbyName').value.trim();
   if (name) socket.emit('rename', name);
