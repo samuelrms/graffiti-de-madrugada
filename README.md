@@ -372,7 +372,7 @@ O que está coberto para buscadores, redes sociais e assistentes de IA:
 | Redirect 301 do host antigo, gzip/brotli, `Cache-Control` imutável para assets com hash e `no-cache` no HTML | `server.ts` |
 
 Para fechar o ciclo fora do código: enviar o sitemap no Google Search Console e
-no Bing Webmaster Tools, e validar o preview do link no LinkedIn Post Inspector.
+no Bing Webmaster Tools, e validar o preview do link num inspetor de cartões (ex.: opengraph.xyz).
 
 ## Fora do escopo
 
